@@ -1,0 +1,44 @@
+// Include libraries
+#include <CMRI.h>
+#include <Auto485.h>
+
+// CMRI Settings
+#define CMRI_ADDR 2 //CMRI node address in JMRI
+#define DE_PIN 2
+
+#define CMRI_INPUTS 24
+#define CMRI_OUTPUTS 48
+
+#define BAUD_RATE 19200
+
+// -----------------------------
+#define output_range_start 3
+#define output_range_end 13 // Pin 13 corresponds to the Arduino on-board LED
+// -----------------------------
+
+// Setup serial communication
+Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
+
+// Define CMRI connection with 24 inputs and 48 outputs
+CMRI cmri(CMRI_ADDR, CMRI_INPUTS, CMRI_OUTPUTS, bus);
+
+void setup() {
+
+    // SET PINS TO INPUT OR OUTPUT
+
+    for (int i=output_range_start; i<=output_range_end; i++) {
+           pinMode(i, OUTPUT);      // define sensor shield pins 8 to 13 as outputs - 5 outputs, plus pin 13 which is the built-in LED.
+    }
+
+    // Start the serial connection
+    Serial.begin(BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
+    bus.begin(BAUD_RATE);
+}
+
+void loop(){
+    cmri.process();
+
+    // PROCESS OUTPUTS
+    // Pin 13 corresponds to the Arduino on-board LED
+    digitalWrite(13, cmri.get_bit(0));  //Bit 0 = address 2001 in JMRI, LED output 1
+}

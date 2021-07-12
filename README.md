@@ -9,5 +9,5 @@ to wait for them to complete their movement, as well as a simple signal bounce.<
 <p>The CMRI_Turnouts_and_Sensors_Relay sketch is a further development of the CMRI_Turnouts_and_Sensors_servo_bounce sketch, for two objectives:
   <ol>
     <li>To remove the control of the frog relay from JMRI/CMRI and have it done internally on the Arduino. This was done as it made more sense to me since you would never want the frog doing some thing different to the point.</li>
-    <li>To make the code easier to expand to accept more servos</li>
+    <li>To make the code easier to expand to accept more servos.</li>
   </ol>

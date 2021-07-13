@@ -12,8 +12,15 @@
 #define BAUD_RATE 19200
 
 // -----------------------------
-#define output_range_start 3
+#define input_range_start 3
+#define input_range_end 7
+#define output_range_start 8
 #define output_range_end 13 // Pin 13 corresponds to the Arduino on-board LED
+// -----------------------------
+
+// -----------------------------
+//#define output_range_start 3
+//#define output_range_end 13 // Pin 13 corresponds to the Arduino on-board LED
 // -----------------------------
 
 // Setup serial communication
@@ -26,6 +33,10 @@ void setup() {
 
     // SET PINS TO INPUT OR OUTPUT
 
+    for (int i=input_range_start; i<=input_range_end; i++) {
+           pinMode(i, INPUT_PULLUP);       // define sensor shield pins 3 to 7 as inputs - 5 inputs.
+    }
+
     for (int i=output_range_start; i<=output_range_end; i++) {
            pinMode(i, OUTPUT);      // define sensor shield pins 8 to 13 as outputs - 5 outputs, plus pin 13 which is the built-in LED.
     }
@@ -37,6 +48,13 @@ void setup() {
 
 void loop(){
     cmri.process();
+
+    // PROCESS SENSORS
+    // Only include lines that are required. This reduces processing time - delete or comment out lines that are not required
+
+    // Do not read 0, 1 or 2
+     cmri.set_bit(0, !digitalRead(3));  //Bit 0 = address 2001 in JMRI, Light sensor 1
+    // cmri.set_bit(1, !digitalRead(4));  //Bit 1 = address 2002 in JMRI, Light sensor 2
 
     // PROCESS OUTPUTS
     // Pin 13 corresponds to the Arduino on-board LED

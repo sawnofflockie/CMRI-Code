@@ -14,7 +14,7 @@
 #define NUMOUTPUTS  1
 
 // -----------------------------
-#define INPUT_RANGE_START    0
+#define INPUT_RANGE_START    3
 #define INPUT_RANGE_END      6
 #define OUTPUT_RANGE_START   7
 #define OUTPUT_RANGE_END    13 // Pin 13 corresponds to the Arduino on-board LED

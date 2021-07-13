@@ -20,7 +20,7 @@
 #define OUTPUT_RANGE_END    13 // Pin 13 corresponds to the Arduino on-board LED
 // -----------------------------
 
-bool lastState[NUMOUTPUTS] - {LOW, LOW};
+bool lastState[NUMOUTPUTS] = {LOW, LOW};
 bool requiredState[NUMOUTPUTS] = {LOW, LOW};
 
 // Setup serial communication

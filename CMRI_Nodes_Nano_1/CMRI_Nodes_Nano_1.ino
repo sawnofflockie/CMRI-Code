@@ -33,8 +33,12 @@ void setup() {
 
     // SET PINS TO INPUT OR OUTPUT
 
-    for (int pin=OUTPUT_RANGE_START; pin<=OUTPUT_RANGE_END; pin++) {
-           pinMode(pin, OUTPUT);      // define sensor shield pins 7 to 13 as outputs - 6 outputs, plus pin 13 which is the built-in LED.
+    for (int i=INPUT_RANGE_START; i<=INPUT_RANGE_END; i++) {
+           pinMode(i, INPUT_PULLUP);       // define sensor shield pins 3 to 7 as inputs - 5 inputs.
+    }
+
+    for (int i=OUTPUT_RANGE_START; i<=OUTPUT_RANGE_END; i++) {
+           pinMode(i, OUTPUT);      // define sensor shield pins 8 to 13 as outputs - 5 outputs, plus pin 13 which is the built-in LED.
     }
 
     // Start the serial connection
@@ -44,6 +48,13 @@ void setup() {
 
 void loop(){
     cmri.process();
+
+    // PROCESS SENSORS
+    // Only include lines that are required. This reduces processing time - delete or comment out lines that are not required
+
+    // Do not read 0, 1 or 2
+     cmri.set_bit(0, !digitalRead(3));  //Bit 0 = address 2001 in JMRI, Light sensor 1
+    // cmri.set_bit(1, !digitalRead(4));  //Bit 1 = address 2002 in JMRI, Light sensor 2
 
     // PROCESS OUTPUTS
     requitedState[0] = cmri.get_bit(0);

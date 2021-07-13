@@ -11,17 +11,17 @@
 
 #define BAUD_RATE 19200
 
-// -----------------------------
-#define input_range_start 3
-#define input_range_end 7
-#define output_range_start 8
-#define output_range_end 13 // Pin 13 corresponds to the Arduino on-board LED
-// -----------------------------
+#define NUMOUTPUTS  1
 
 // -----------------------------
-//#define output_range_start 3
-//#define output_range_end 13 // Pin 13 corresponds to the Arduino on-board LED
+#define INPUT_RANGE_START    0
+#define INPUT_RANGE_END      6
+#define OUTPUT_RANGE_START   7
+#define OUTPUT_RANGE_END    13 // Pin 13 corresponds to the Arduino on-board LED
 // -----------------------------
+
+bool lastState[NUMOUTPUTS] - {LOW, LOW};
+bool requiredState[NUMOUTPUTS] = {LOW, LOW};
 
 // Setup serial communication
 Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
@@ -33,11 +33,11 @@ void setup() {
 
     // SET PINS TO INPUT OR OUTPUT
 
-    for (int i=input_range_start; i<=input_range_end; i++) {
+    for (int i=INPUT_RANGE_START; i<=INPUT_RANGE_END; i++) {
            pinMode(i, INPUT_PULLUP);       // define sensor shield pins 3 to 7 as inputs - 5 inputs.
     }
 
-    for (int i=output_range_start; i<=output_range_end; i++) {
+    for (int i=OUTPUT_RANGE_START; i<=OUTPUT_RANGE_END; i++) {
            pinMode(i, OUTPUT);      // define sensor shield pins 8 to 13 as outputs - 5 outputs, plus pin 13 which is the built-in LED.
     }
 
@@ -57,6 +57,10 @@ void loop(){
     // cmri.set_bit(1, !digitalRead(4));  //Bit 1 = address 2002 in JMRI, Light sensor 2
 
     // PROCESS OUTPUTS
-    // Pin 13 corresponds to the Arduino on-board LED
-    digitalWrite(13, cmri.get_bit(0));  //Bit 0 = address 2001 in JMRI, LED output 1
+    requitedState[0] = cmri.get_bit(0);
+    if (lastState[0] != requiredState[0]) {
+        // Pin 13 corresponds to the Arduino on-board LED
+        digitalWrite(13, requiedState[0]);  //Bit 0 = address 2001 in JMRI, LED output 1
+        lastState[0] = requiredState[0];
+    }
 }

@@ -60,7 +60,7 @@ void loop(){
     requitedState[0] = cmri.get_bit(0);
     if (lastState[0] != requiredState[0]) {
         // Pin 13 corresponds to the Arduino on-board LED
-        digitalWrite(13, requiedState[0]);  //Bit 0 = address 2001 in JMRI, LED output 1
+        digitalWrite(13, requiredState[0]);  //Bit 0 = address 2001 in JMRI, LED output 1
         lastState[0] = requiredState[0];
     }
 }

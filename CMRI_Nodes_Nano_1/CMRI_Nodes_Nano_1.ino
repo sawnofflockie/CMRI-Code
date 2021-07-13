@@ -20,8 +20,8 @@
 #define OUTPUT_RANGE_END    13 // Pin 13 corresponds to the Arduino on-board LED
 // -----------------------------
 
-bool lastState[NUMOUTPUTS] = {LOW, LOW};
-bool requiredState[NUMOUTPUTS] = {LOW, LOW};
+bool lastState[NUMOUTPUTS] = {LOW};
+bool requiredState[NUMOUTPUTS] = {LOW};
 
 // Setup serial communication
 Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins

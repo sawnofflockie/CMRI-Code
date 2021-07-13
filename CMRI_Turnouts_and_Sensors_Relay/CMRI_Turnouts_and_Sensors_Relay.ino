@@ -169,6 +169,84 @@ servo initialiseServo(servo currentServo, int Throw, int Close, int servoNum) {
 
 // ----------------------------------------------
 
+servo throwServo(servo currentServo) {
+    switch (currentServo.state) {
+        case CLOSED:
+            currentServo.state = THROWING;
+        break;
+        case THROWING:
+            // Check to see if movement is required.
+            if (currentServo.currentPosition < currentServo.Throw) {
+                currentServo.currentPosition += currentServo.upStep;
+            } else {
+                // Reached the end of travel, hence change the state.
+                currentServo.state = THROWN;
+            }
+        break;
+        case THROWN:
+            // Due to having a step size greater than 1 it would be possible to overshoot the end point.
+            // Hence need to check for this and bring it back to the correct thrown position.
+            if (currentServo.currentPosition > currentServo.Throw) {
+                currentServo.currentPosition = currentServo.Throw;
+            }
+        break;
+    }
+
+    return currentServo;
+}
+
+// ----------------------------------------------
+
+servo closeServo(servo currentServo) {
+    switch (currentServo.state) {
+        case THROWN:
+            currentServo.state = CLOSING;
+        break;
+        case CLOSING:
+            // Check to see if movement is required.
+            if (currentServo.currentPosition > currentServo.Close) {
+                currentServo.currentPosition -= currentServo.downStep;
+            } else {
+                // Reached the end of travel, hence change the state.
+                if (currentServo.servoType == SIGNAL_HEAD) {
+                    currentServo.state = BOUNCING_UP;
+                } else {
+                    currentServo.state = CLOSED; // Points don't bounce
+                }
+            }
+        break;
+        case CLOSED:
+            // Due to having a step size greater than 1 it would be possible to overshoot the end point.
+            // Hence need to check for this and bring it back to the correct closed position.
+            if (currentServo.currentPosition < currentServo.Close) {
+                currentServo.currentPosition = currentServo.Close;
+            }
+        break;
+        case BOUNCING_UP:
+            // Check to see if movement is required.
+            if (currentServo.currentPosition < currentServo.bounce) {
+                currentServo.currentPosition += currentServo.downStep;
+            } else {
+                // Reached the end of travel, hence change the state.
+                currentServo.state = BOUNCING_DOWN;
+            }
+        break;
+        case BOUNCING_DOWN:
+            // Check to see if movement is required.
+            if (currentServo.currentPosition > currentServo.Close) {
+                currentServo.currentPosition -= currentServo.downStep;
+            } else {
+                // Reached the end of travel, hence change the state.
+                currentServo.state = CLOSED;
+            }
+        break;
+    }
+
+    return currentServo;
+}
+
+// ----------------------------------------------
+
 void processServos() {
     // PROCESS SERVOS
     // Assume servos start on bit 0 which corresponds to output address 1001
@@ -179,77 +257,15 @@ void processServos() {
             // requiredState should only ever be either CLOSED or THROWN, i.e. 0 or 1, as this comes from cmri.
             switch (myServos[currentServo].requiredState) {
                 case THROWN:
-                    switch (myServos[currentServo].state) {
-                        case CLOSED:
-                            myServos[currentServo].state = THROWING;
-                        break;
-                        case THROWING:
-                            // Check to see if movement is required.
-                            if (myServos[currentServo].currentPosition < myServos[currentServo].Throw) {
-                                myServos[currentServo].currentPosition += myServos[currentServo].upStep;
-                            } else {
-                                // Reached the end of travel, hence change the state.
-                                myServos[currentServo].state = THROWN;
-                            }
-                        break;
-                        case THROWN:
-                            // Due to having a step size greater than 1 it would be possible to overshoot the end point.
-                            // Hence need to check for this and bring it back to the correct thrown position.
-                            if (myServos[currentServo].currentPosition > myServos[currentServo].Throw) {
-                                myServos[currentServo].currentPosition = myServos[currentServo].Throw;
-                            }
-                        break;
-                    }
+                    myServos[currentServo] = throwServo(myServos[currentServo]);
                 break;
                 case CLOSED:
-                    switch (myServos[currentServo].state) {
-                        case THROWN:
-                            myServos[currentServo].state = CLOSING;
-                        break;
-                        case CLOSING:
-                            // Check to see if movement is required.
-                            if (myServos[currentServo].currentPosition > myServos[currentServo].Close) {
-                                myServos[currentServo].currentPosition -= myServos[currentServo].downStep;
-                            } else {
-                                // Reached the end of travel, hence change the state.
-                                if (myServos[currentServo].servoType == SIGNAL_HEAD) {
-                                    myServos[currentServo].state = BOUNCING_UP;
-                                } else {
-                                    myServos[currentServo].state = CLOSED; // Points don't bounce
-                                }
-                            }
-                        break;
-                        case CLOSED:
-                            // Due to having a step size greater than 1 it would be possible to overshoot the end point.
-                            // Hence need to check for this and bring it back to the correct closed position.
-                            if (myServos[currentServo].currentPosition < myServos[currentServo].Close) {
-                                myServos[currentServo].currentPosition = myServos[currentServo].Close;
-                            }
-                        break;
-                        case BOUNCING_UP:
-                            // Check to see if movement is required.
-                            if (myServos[currentServo].currentPosition < myServos[currentServo].bounce) {
-                                myServos[currentServo].currentPosition += myServos[currentServo].downStep;
-                            } else {
-                                // Reached the end of travel, hence change the state.
-                                myServos[currentServo].state = BOUNCING_DOWN;
-                            }
-                        break;
-                        case BOUNCING_DOWN:
-                            // Check to see if movement is required.
-                            if (myServos[currentServo].currentPosition > myServos[currentServo].Close) {
-                                myServos[currentServo].currentPosition -= myServos[currentServo].downStep;
-                            } else {
-                                // Reached the end of travel, hence change the state.
-                                myServos[currentServo].state = CLOSED;
-                            }
-                        break;
-                    }
+                    myServos[currentServo] = closeServo(myServos[currentServo]);
                 break;
             }
+            // If the relayNum has a value that is not NO_RELAY (-1) then it must be a point.
             if (myServos[currentServo].relayNum > NO_RELAY) {
                 // Only points have a frog relay and the state can only be CLOSED (0) or THROWN (1)
-                // int relayNum = myServos[currentServo].relayNum;
                 cmri.set_bit(8, !myServos[currentServo].state);  //Bit 8 = address 1009 in JMRI, Virtual Feedback Sensor 9
                 opReqState[myServos[currentServo].relayNum] = myServos[currentServo].state;   // Set bit state of frog relay
             }

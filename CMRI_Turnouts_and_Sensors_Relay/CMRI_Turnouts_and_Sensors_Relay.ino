@@ -136,14 +136,6 @@ servo initialiseServo(servo currentServo, int Throw, int Close, int servoNum) {
     currentServo.Close = Close;
     currentServo.state = CLOSED;
     currentServo.currentPosition = Close;
-    // if (currentServo.servoNum == POINT_1) {
-        // don't bother with a step change here as the spring on the point stops it moving slowly.
-        // currentServo.upStep = Throw - Close;
-        // currentServo.downStep = Throw - Close;
-    // } else {
-        // currentServo.upStep = SIGSTEP;
-        // currentServo.downStep = SIGDOWNSTEP;
-    // }
     switch (currentServo.servoNum) {
         case POINT_1:
             currentServo.relayNum = FROG_RELAY_1;
@@ -264,7 +256,7 @@ void processServos() {
                 break;
             }
             // If the relayNum has a value that is not NO_RELAY (-1) then it must be a point.
-            if (myServos[currentServo].relayNum > NO_RELAY) {
+            if (myServos[currentServo].relayNum > NO_RELAY && myServos[currentServo].state <= 1) {
                 // Only points have a frog relay and the state can only be CLOSED (0) or THROWN (1)
                 cmri.set_bit(8, !myServos[currentServo].state);  //Bit 8 = address 1009 in JMRI, Virtual Feedback Sensor 9
                 opReqState[myServos[currentServo].relayNum] = myServos[currentServo].state;   // Set bit state of frog relay

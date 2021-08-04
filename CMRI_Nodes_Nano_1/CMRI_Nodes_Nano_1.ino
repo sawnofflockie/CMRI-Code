@@ -13,6 +13,13 @@
 
 #define NUMOUTPUTS  1
 
+#define NUMPWMOUTPUTS   2
+
+#define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
+
+// Servo frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos
+#define PWM_FRAME_RATE    50
+
 // -----------------------------
 #define INPUT_RANGE_START    3
 #define INPUT_RANGE_END      6
@@ -22,6 +29,9 @@
 
 bool lastState[NUMOUTPUTS] = {LOW};
 bool requiredState[NUMOUTPUTS] = {LOW};
+
+// Define the PCA9685 board addresses
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40); //setup the board address - defaults to 0x40 if not specified
 
 // Setup serial communication
 Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
@@ -44,6 +54,10 @@ void setup() {
     // Start the serial connection
     Serial.begin(BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
     bus.begin(BAUD_RATE);
+
+    // Initialize PCA9685 board
+    pwm.begin();
+    pwm.setPWMFreq(PWM_FRAME_RATE);  // This is the maximum PWM frequency
 }
 
 void loop(){
@@ -59,8 +73,15 @@ void loop(){
     // PROCESS OUTPUTS
     requiredState[0] = cmri.get_bit(0);
     if (lastState[0] != requiredState[0]) {
+        int level = 0;
         // Pin 13 corresponds to the Arduino on-board LED
         digitalWrite(13, requiredState[0]);  //Bit 0 = address 2001 in JMRI, LED output 1
+        if (requiredState[0] == HIGH) {
+            level = PWM_NORMAL_LEVEL;
+        } else {
+            level = 0;
+        }
+        pwm.writeMicroseconds(0, level);
         lastState[0] = requiredState[0];
     }
 }

@@ -9,8 +9,7 @@
 #define CMRI_INPUTS 24
 #define CMRI_OUTPUTS 48
 
-//#define BAUD_RATE 19200
-#define BAUD_RATE 28800
+#define BAUD_RATE 19200
 
 // -----------------------------
 #define input_range_start 3
@@ -51,6 +50,7 @@ void loop(){
     // Do not read 0, 1 or 2
     cmri.set_bit(0, !digitalRead(3));  //Bit 0 = address 1001 in JMRI, IR sensor 1
     cmri.set_bit(1, !digitalRead(4));  //Bit 1 = address 1002 in JMRI, Light Level Sensor 1
+    cmri.set_bit(2, !digitalRead(5));  //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 1
 
     // PROCESS OUTPUTS
     // Pin 13 corresponds to the Arduino on-board LED

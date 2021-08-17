@@ -11,21 +11,25 @@
 #define CMRI_OUTPUTS 48
 
 #define BAUD_RATE 19200
+#define SERIAL_BAUD_RATE 19200
 
 #define NUM_PWM_OUTPUTS   2
 
-#define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
-#define PWM_VARIANCE        1023 // Max amount of variance up or down of LED level.
-
 // Servo frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos, but in this case it is for LEDs.
 #define PWM_FRAME_RATE    120 // Can see 100Hz flicker, so made it a bit faster.
+
+#define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
+#define PWM_VARIANCE        512 // Max amount of variance up or down of LED level.
+
+#define PWM_MIN_LEVEL	(PWM_NORMAL_LEVEL - PWM_VARIANCE)
+#define PWM_MAX_LEVEL	(PWM_NORMAL_LEVEL + PWM_VARIANCE)
 
 // All in milliseconds
 #define FLICKER_MIN_TIME    75
 #define FLICKER_MAX_TIME    350
 
 #define MIN_WAIT_PERIOD		20000
-#define WAIT_VARIANCE       10000
+#define MAX_WAIT_PERIOD		30000
 
 // -----------------------------
 #define INPUT_RANGE_START    3
@@ -49,8 +53,8 @@
 // -----------------------------
 // LED street light types
 // -----------------------------
-#define GAS         0
-#define ELECTRIC    1
+#define ELECTRIC    0
+#define GAS         1
 
 // Create structure to hold data about the lights
 struct light {
@@ -93,11 +97,10 @@ int outputLevel(int level, int lightNum) {
         break;
         case ON:
 		case WAIT_OFF:
-			if (streetLight[lightNum].lightType == GAS) {
-				streetLight[lightNum].currentLevel = PWM_NORMAL_LEVEL - PWM_VARIANCE + random(PWM_VARIANCE * 2);
-			} else {
-				streetLight[lightNum].currentLevel = PWM_NORMAL_LEVEL;
-			}
+			// lightType is either ELECTRIC (0), or GAS (1), hence multiplying the variance by the light type will automatically switch the variance off or on depending on light type.
+			streetLight[lightNum].currentLevel = PWM_NORMAL_LEVEL - ((random(PWM_VARIANCE * 2) - PWM_VARIANCE) * streetLight[lightNum].lightType);
+			// Serial.println("level:");
+			// Serial.println(streetLight[lightNum].currentLevel);
         break;
         case GOING_OFF:
             if (streetLight[lightNum].currentLevel > OFF) {
@@ -121,8 +124,8 @@ void lightLED(int pwmOutput) {
 }
 
 void setup_wait_period(int pwmOutput, unsigned long currentTime) {
-	streetLight[pwmOutput].waitPeriod = (MIN_WAIT_PERIOD * (unsigned long)pwmOutput) + random(WAIT_VARIANCE);
-	streetLight[pwmOutput].waitStart = currentTime;
+		streetLight[pwmOutput].waitPeriod = random(MIN_WAIT_PERIOD, MAX_WAIT_PERIOD) * (unsigned long)pwmOutput;
+		streetLight[pwmOutput].waitStart = currentTime;
 }
 
 void process_outputs() {
@@ -132,12 +135,8 @@ void process_outputs() {
 		switch (streetLight[pwmOutput].state) {
 			case OFF:
 				if (requiredState == HIGH) {
-					if (pwmOutput != 0) {
-						streetLight[pwmOutput].state = WAIT_ON;
-						setup_wait_period(pwmOutput, currentTime);
-					} else {
-						streetLight[pwmOutput].state = GOING_ON;
-					}
+					streetLight[pwmOutput].state = WAIT_ON;
+					setup_wait_period(pwmOutput, currentTime);
 				}
 			break;
 			case WAIT_ON:
@@ -147,12 +146,8 @@ void process_outputs() {
 			break;
 			case ON:
 				if (requiredState == LOW) {
-					if (pwmOutput != 0) {
-						streetLight[pwmOutput].state = WAIT_OFF;
-						setup_wait_period(pwmOutput, currentTime);
-					} else {
-						streetLight[pwmOutput].state = GOING_OFF;
-					}
+					streetLight[pwmOutput].state = WAIT_OFF;
+					setup_wait_period(pwmOutput, currentTime);
 				}
 			break;
 			case WAIT_OFF:
@@ -170,14 +165,13 @@ void process_outputs() {
 void setup() {
 
     // SET PINS TO INPUT OR OUTPUT
-
-    for (int i=INPUT_RANGE_START; i<=INPUT_RANGE_END; i++) {
-           pinMode(i, INPUT_PULLUP);       // define sensor shield pins 3 to 7 as inputs - 5 inputs.
-    }
-
-    for (int i=OUTPUT_RANGE_START; i<=OUTPUT_RANGE_END; i++) {
-           pinMode(i, OUTPUT);      // define sensor shield pins 8 to 13 as outputs - 5 outputs, plus pin 13 which is the built-in LED.
-    }
+    // However in the current setup there are no inputs and all outputs are via the PCA9685 board (pwm).
+    // for (int i=INPUT_RANGE_START; i<=INPUT_RANGE_END; i++) {
+    //        pinMode(i, INPUT_PULLUP);       // define sensor shield pins 3 to 7 as inputs - 5 inputs.
+    // }
+    // for (int i=OUTPUT_RANGE_START; i<=OUTPUT_RANGE_END; i++) {
+    //        pinMode(i, OUTPUT);      // define sensor shield pins 8 to 13 as outputs - 5 outputs, plus pin 13 which is the built-in LED.
+    // }
 
     randomSeed(analogRead(0));
 
@@ -192,7 +186,7 @@ void setup() {
         streetLight[pwmOutput].waitStart = 0;
     }
     // Start the serial connection
-    Serial.begin(BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
+    Serial.begin(SERIAL_BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
     bus.begin(BAUD_RATE);
 
     // Initialize PCA9685 board

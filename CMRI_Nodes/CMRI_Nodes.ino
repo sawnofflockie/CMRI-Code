@@ -10,6 +10,7 @@
 #define CMRI_OUTPUTS 48
 
 #define BAUD_RATE 19200
+#define SERIAL_BAUD_RATE 19200
 
 // -----------------------------
 #define input_range_start 3
@@ -37,7 +38,7 @@ void setup() {
     }
 
     // Start the serial connection
-    Serial.begin(BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
+    Serial.begin(SERIAL_BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
     bus.begin(BAUD_RATE);
 }
 

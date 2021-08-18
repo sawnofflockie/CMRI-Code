@@ -4,32 +4,14 @@
 #include <Adafruit_PWMServoDriver.h>
 
 // CMRI Settings
-#define CMRI_ADDR 2 //CMRI node address in JMRI
-#define DE_PIN 2
+#define CMRI_ADDR	2 //CMRI node address in JMRI
+#define DE_PIN		2
 
-#define CMRI_INPUTS 24
-#define CMRI_OUTPUTS 48
+#define CMRI_INPUTS		24
+#define CMRI_OUTPUTS	48
 
-#define BAUD_RATE 19200
-#define SERIAL_BAUD_RATE 19200
-
-#define NUM_PWM_OUTPUTS   2
-
-// Servo frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos, but in this case it is for LEDs.
-#define PWM_FRAME_RATE    120 // Can see 100Hz flicker, so made it a bit faster.
-
-#define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
-#define PWM_VARIANCE        512 // Max amount of variance up or down of LED level.
-
-#define PWM_MIN_LEVEL	(PWM_NORMAL_LEVEL - PWM_VARIANCE)
-#define PWM_MAX_LEVEL	(PWM_NORMAL_LEVEL + PWM_VARIANCE)
-
-// All in milliseconds
-#define FLICKER_MIN_TIME    75
-#define FLICKER_MAX_TIME    350
-
-#define MIN_WAIT_PERIOD		20000
-#define MAX_WAIT_PERIOD		30000
+#define BAUD_RATE			19200
+#define SERIAL_BAUD_RATE	19200
 
 // -----------------------------
 #define INPUT_RANGE_START    3
@@ -37,6 +19,30 @@
 #define OUTPUT_RANGE_START   7
 #define OUTPUT_RANGE_END    13 // Pin 13 corresponds to the Arduino on-board LED
 // -----------------------------
+
+#define NUM_PWM_OUTPUTS   3
+
+// Servo frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos, but in this case it is for LEDs.
+#define PWM_FRAME_RATE    120 // Can see 100Hz flicker, so made it a bit faster.
+
+#define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
+#define PWM_VARIANCE         512 // Max amount of variance up or down of LED level.
+
+#define PWM_MIN_LEVEL	(PWM_NORMAL_LEVEL - PWM_VARIANCE)
+#define PWM_MAX_LEVEL	(PWM_NORMAL_LEVEL + PWM_VARIANCE)
+
+// -------------------
+// All in milliseconds
+// -------------------
+#define FLICKER_MIN_TIME		     75
+#define FLICKER_MAX_TIME		    350
+
+#define MIN_WAIT_PERIOD			  20000
+#define MAX_WAIT_PERIOD			  30000
+#define ELECTRIC_WAIT_PERIOD	 5000
+
+#define LIGHT_LEVEL_STEP        100
+// -------------------
 
 // -----------------------------
 // LED street light states
@@ -46,9 +52,7 @@
 #define WAIT_ON     2
 #define GOING_ON    3
 #define GOING_OFF   4
-#define WAIT_OFF	5
-
-#define LIGHT_LEVEL_STEP  100
+#define WAIT_OFF	  5
 
 // -----------------------------
 // LED street light types
@@ -89,7 +93,7 @@ int outputLevel(int level, int lightNum) {
 			streetLight[lightNum].currentLevel = OFF;
 		break;
         case GOING_ON:
-            if (streetLight[lightNum].currentLevel < PWM_NORMAL_LEVEL) {
+            if (streetLight[lightNum].currentLevel < PWM_NORMAL_LEVEL && streetLight[lightNum].lightType == GAS) {
                 streetLight[lightNum].currentLevel += LIGHT_LEVEL_STEP;
             } else {
                 streetLight[lightNum].state = ON;
@@ -103,7 +107,7 @@ int outputLevel(int level, int lightNum) {
 			// Serial.println(streetLight[lightNum].currentLevel);
         break;
         case GOING_OFF:
-            if (streetLight[lightNum].currentLevel > OFF) {
+            if (streetLight[lightNum].currentLevel > OFF && streetLight[lightNum].lightType == GAS) {
                 streetLight[lightNum].currentLevel -= LIGHT_LEVEL_STEP;
             } else {
                 streetLight[lightNum].state = OFF;
@@ -118,13 +122,22 @@ void lightLED(int pwmOutput) {
 	if ((currentTime - streetLight[pwmOutput].lastTime) > streetLight[pwmOutput].flickerDelay) {
 		level = outputLevel(level, pwmOutput);
 		pwm.writeMicroseconds(pwmOutput, level);
-		streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME);
+        // Don't want a flicker if the light is electric so multiplying by the light type sets flicker delay to zero in this case.
+		streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME) * (unsigned long)streetLight[pwmOutput].lightType;
 		streetLight[pwmOutput].lastTime = currentTime;
 	}
 }
 
 void setup_wait_period(int pwmOutput, unsigned long currentTime) {
-		streetLight[pwmOutput].waitPeriod = random(MIN_WAIT_PERIOD, MAX_WAIT_PERIOD) * (unsigned long)pwmOutput;
+//        streetLight[pwmOutput].waitPeriod = random(MIN_WAIT_PERIOD, MAX_WAIT_PERIOD) * (unsigned long)pwmOutput * (unsigned long)streetLight[pwmOutput].lightType;
+        switch (streetLight[pwmOutput].lightType) {
+            case ELECTRIC:
+                streetLight[pwmOutput].waitPeriod = random(ELECTRIC_WAIT_PERIOD);
+            break;
+            case GAS:
+                streetLight[pwmOutput].waitPeriod = random(MIN_WAIT_PERIOD, MAX_WAIT_PERIOD) * (unsigned long)pwmOutput;
+            break;
+        }
 		streetLight[pwmOutput].waitStart = currentTime;
 }
 
@@ -180,6 +193,7 @@ void setup() {
         streetLight[pwmOutput].state = OFF;
         streetLight[pwmOutput].currentLevel = 0;
         streetLight[pwmOutput].lightType = GAS;
+//        streetLight[pwmOutput].lightType = ELECTRIC;
         streetLight[pwmOutput].lastTime = 0;
         streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME);
         streetLight[pwmOutput].waitPeriod = 0;

@@ -4,14 +4,14 @@
 #include <Adafruit_PWMServoDriver.h>
 
 // CMRI Settings
-#define CMRI_ADDR	2 //CMRI node address in JMRI
-#define DE_PIN		2
+#define CMRI_ADDR   2 //CMRI node address in JMRI
+#define DE_PIN      2
 
-#define CMRI_INPUTS		24
-#define CMRI_OUTPUTS	48
+#define CMRI_INPUTS     24
+#define CMRI_OUTPUTS    48
 
-#define BAUD_RATE			19200
-#define SERIAL_BAUD_RATE	19200
+#define BAUD_RATE           19200
+#define SERIAL_BAUD_RATE    19200
 
 // -----------------------------
 #define INPUT_RANGE_START    3
@@ -28,31 +28,31 @@
 #define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
 #define PWM_VARIANCE         512 // Max amount of variance up or down of LED level.
 
-#define PWM_MIN_LEVEL	(PWM_NORMAL_LEVEL - PWM_VARIANCE)
-#define PWM_MAX_LEVEL	(PWM_NORMAL_LEVEL + PWM_VARIANCE)
+#define PWM_MIN_LEVEL   (PWM_NORMAL_LEVEL - PWM_VARIANCE)
+#define PWM_MAX_LEVEL   (PWM_NORMAL_LEVEL + PWM_VARIANCE)
 
 // -------------------
 // All in milliseconds
 // -------------------
-#define FLICKER_MIN_TIME		     75
-#define FLICKER_MAX_TIME		    350
+#define FLICKER_MIN_TIME           75
+#define FLICKER_MAX_TIME          350
 
-#define MIN_WAIT_PERIOD			  20000
-#define MAX_WAIT_PERIOD			  30000
-#define ELECTRIC_WAIT_PERIOD	 5000
+#define ELECTRIC_WAIT_PERIOD     5000
+#define MIN_WAIT_PERIOD         20000
+#define MAX_WAIT_PERIOD         30000
 
-#define LIGHT_LEVEL_STEP        100
+#define LIGHT_LEVEL_STEP          100
 // -------------------
 
 // -----------------------------
 // LED street light states
 // -----------------------------
-#define OFF         0
-#define ON          1
-#define WAIT_ON     2
-#define GOING_ON    3
-#define GOING_OFF   4
-#define WAIT_OFF	  5
+#define OFF         0 // Light completely extinguished and no change of state imminent.
+#define ON          1 // Light switched on with perhaps some random variations in intensity.
+#define WAIT_ON     2 // A change of state to ON has been requested, but the light is waiting for its turn to go on.
+#define GOING_ON    3 // A change to ON is now being actioned and the light is ramping up to operational intensity.
+#define GOING_OFF   4 // A change to OFF is now being actioned and the light is ramping down to zero intensity.
+#define WAIT_OFF    5 // A change of state to OFF has been requested, but the light is waiting for its turn to go off.
 
 // -----------------------------
 // LED street light types
@@ -62,20 +62,19 @@
 
 // Create structure to hold data about the lights
 struct light {
-    int lightNum;
-    int state;
-    int currentLevel;
-    int lightType; // Can be either GAS, ELECTRIC
-    unsigned long lastTime;
-    unsigned long flickerDelay;
-    unsigned long waitPeriod;
-	unsigned long waitStart;
+    int state; // Can be OFF, WAIT_ON, GOING_ON, ON, WAIT_OFF, GOING_OFF.
+    int currentLevel; // Holds the light intensity aka the pulse width.
+    int lightType; // Can be either ELECTRIC (0) or GAS (1)
+    unsigned long lastTime; // The time, in milliseconds, since the last processing loop for a given light.
+    unsigned long flickerDelay; // The time to wait before the next random increase or decrease in light intensity.
+    unsigned long waitPeriod; // The amount of time to wait before starting to switch on or switch off a light.
+    unsigned long waitStart; // The time at which to start the process of switching a light on or off.
 };
 
 light streetLight[NUM_PWM_OUTPUTS];
 
-bool requiredState = LOW;
-unsigned long currentTime;
+bool requiredState = OFF;
+unsigned long currentTime; // The time, in milliseconds, of the current processing loop.
 
 // Define the PCA9685 board addresses
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40); //setup the board address - defaults to 0x40 if not specified
@@ -85,95 +84,6 @@ Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
 
 // Define CMRI connection with 24 inputs and 48 outputs
 CMRI cmri(CMRI_ADDR, CMRI_INPUTS, CMRI_OUTPUTS, bus);
-
-int outputLevel(int level, int lightNum) {
-    switch (streetLight[lightNum].state) {
-		case OFF:
-		case WAIT_ON:
-			streetLight[lightNum].currentLevel = OFF;
-		break;
-        case GOING_ON:
-            if (streetLight[lightNum].currentLevel < PWM_NORMAL_LEVEL && streetLight[lightNum].lightType == GAS) {
-                streetLight[lightNum].currentLevel += LIGHT_LEVEL_STEP;
-            } else {
-                streetLight[lightNum].state = ON;
-            }
-        break;
-        case ON:
-		case WAIT_OFF:
-			// lightType is either ELECTRIC (0), or GAS (1), hence multiplying the variance by the light type will automatically switch the variance off or on depending on light type.
-			streetLight[lightNum].currentLevel = PWM_NORMAL_LEVEL - ((random(PWM_VARIANCE * 2) - PWM_VARIANCE) * streetLight[lightNum].lightType);
-			// Serial.println("level:");
-			// Serial.println(streetLight[lightNum].currentLevel);
-        break;
-        case GOING_OFF:
-            if (streetLight[lightNum].currentLevel > OFF && streetLight[lightNum].lightType == GAS) {
-                streetLight[lightNum].currentLevel -= LIGHT_LEVEL_STEP;
-            } else {
-                streetLight[lightNum].state = OFF;
-            }
-        break;
-    }
-    return streetLight[lightNum].currentLevel;
-}
-
-void lightLED(int pwmOutput) {
-    int level = 0;
-	if ((currentTime - streetLight[pwmOutput].lastTime) > streetLight[pwmOutput].flickerDelay) {
-		level = outputLevel(level, pwmOutput);
-		pwm.writeMicroseconds(pwmOutput, level);
-        // Don't want a flicker if the light is electric so multiplying by the light type sets flicker delay to zero in this case.
-		streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME) * (unsigned long)streetLight[pwmOutput].lightType;
-		streetLight[pwmOutput].lastTime = currentTime;
-	}
-}
-
-void setup_wait_period(int pwmOutput, unsigned long currentTime) {
-//        streetLight[pwmOutput].waitPeriod = random(MIN_WAIT_PERIOD, MAX_WAIT_PERIOD) * (unsigned long)pwmOutput * (unsigned long)streetLight[pwmOutput].lightType;
-        switch (streetLight[pwmOutput].lightType) {
-            case ELECTRIC:
-                streetLight[pwmOutput].waitPeriod = random(ELECTRIC_WAIT_PERIOD);
-            break;
-            case GAS:
-                streetLight[pwmOutput].waitPeriod = random(MIN_WAIT_PERIOD, MAX_WAIT_PERIOD) * (unsigned long)pwmOutput;
-            break;
-        }
-		streetLight[pwmOutput].waitStart = currentTime;
-}
-
-void process_outputs() {
-    currentTime = millis();
-    requiredState = cmri.get_bit(0); //Bit 0 = address 2001 in JMRI, LED output 1
-    for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
-		switch (streetLight[pwmOutput].state) {
-			case OFF:
-				if (requiredState == HIGH) {
-					streetLight[pwmOutput].state = WAIT_ON;
-					setup_wait_period(pwmOutput, currentTime);
-				}
-			break;
-			case WAIT_ON:
-				if (currentTime > streetLight[pwmOutput].waitStart + streetLight[pwmOutput].waitPeriod) {
-					streetLight[pwmOutput].state = GOING_ON;
-				}
-			break;
-			case ON:
-				if (requiredState == LOW) {
-					streetLight[pwmOutput].state = WAIT_OFF;
-					setup_wait_period(pwmOutput, currentTime);
-				}
-			break;
-			case WAIT_OFF:
-				if (currentTime > streetLight[pwmOutput].waitStart + streetLight[pwmOutput].waitPeriod) {
-					streetLight[pwmOutput].state = GOING_OFF;
-				}
-			case GOING_ON:
-			case GOING_OFF:
-			break;
-		}
-		lightLED(pwmOutput);
-    }
-}
 
 void setup() {
 
@@ -189,7 +99,6 @@ void setup() {
     randomSeed(analogRead(0));
 
     for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
-        streetLight[pwmOutput].lightNum = pwmOutput;
         streetLight[pwmOutput].state = OFF;
         streetLight[pwmOutput].currentLevel = 0;
         streetLight[pwmOutput].lightType = GAS;
@@ -220,4 +129,97 @@ void loop(){
 
     // PROCESS OUTPUTS
     process_outputs();
+}
+
+void process_outputs() {
+    currentTime = millis();
+    requiredState = cmri.get_bit(0); //Bit 0 = address 2001 in JMRI, LED output 1
+    for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
+        switch (streetLight[pwmOutput].state) {
+            case OFF:
+                if (requiredState == ON) {
+                    streetLight[pwmOutput].state = WAIT_ON;
+                    setup_wait_period(pwmOutput);
+                }
+            break;
+            case WAIT_ON:
+                if (currentTime > streetLight[pwmOutput].waitStart + streetLight[pwmOutput].waitPeriod) {
+                    streetLight[pwmOutput].state = GOING_ON;
+                }
+            break;
+            case ON:
+                if (requiredState == OFF) {
+                    streetLight[pwmOutput].state = WAIT_OFF;
+                    setup_wait_period(pwmOutput);
+                }
+            break;
+            case WAIT_OFF:
+                if (currentTime > streetLight[pwmOutput].waitStart + streetLight[pwmOutput].waitPeriod) {
+                    streetLight[pwmOutput].state = GOING_OFF;
+                }
+            case GOING_ON:
+            case GOING_OFF:
+            break;
+        }
+        lightLED(pwmOutput);
+    }
+}
+
+void setup_wait_period(int pwmOutput) {
+        switch (streetLight[pwmOutput].lightType) {
+            case ELECTRIC:
+                // Real electric lights come on randomly due to slight variations in their light sensors.
+                streetLight[pwmOutput].waitPeriod = random(ELECTRIC_WAIT_PERIOD);
+            break;
+            case GAS:
+                // Want the gas lights to come on one after another with a suitable random delay.
+                // This is to simulate a bloke lighting one light then walking, ladder in hand, to the next and so on.
+                streetLight[pwmOutput].waitPeriod = random(MIN_WAIT_PERIOD, MAX_WAIT_PERIOD) * (unsigned long)pwmOutput;
+            break;
+        }
+        streetLight[pwmOutput].waitStart = currentTime;
+}
+
+void lightLED(int pwmOutput) {
+    if ((currentTime - streetLight[pwmOutput].lastTime) > streetLight[pwmOutput].flickerDelay) {
+        outputLevel(pwmOutput);
+        pwm.writeMicroseconds(pwmOutput, streetLight[pwmOutput].currentLevel);
+        // Don't want a flicker if the light is electric so multiplying by the light type sets flicker delay to zero in this case.
+        streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME) * (unsigned long)streetLight[pwmOutput].lightType;
+        streetLight[pwmOutput].lastTime = currentTime;
+    }
+}
+
+void outputLevel(int pwmOutput) {
+    switch (streetLight[pwmOutput].state) {
+        case OFF:
+        case WAIT_ON:
+            streetLight[pwmOutput].currentLevel = OFF;
+        break;
+        case GOING_ON:
+            if (streetLight[pwmOutput].currentLevel < PWM_NORMAL_LEVEL && streetLight[pwmOutput].lightType == GAS) {
+                // If it's a gas light simulate the tap being switched on.
+                streetLight[pwmOutput].currentLevel += LIGHT_LEVEL_STEP;
+            } else {
+                // If electric light, just go on.
+                streetLight[pwmOutput].state = ON;
+            }
+        break;
+        case ON:
+        case WAIT_OFF:
+            // lightType is either ELECTRIC (0), or GAS (1), hence multiplying the variance by the light type will automatically switch the variance off or on depending on light type.
+            streetLight[pwmOutput].currentLevel = PWM_NORMAL_LEVEL - ((random(PWM_VARIANCE * 2) - PWM_VARIANCE) * streetLight[pwmOutput].lightType);
+            // Serial.println("level:");
+            // Serial.println(streetLight[pwmOutput].currentLevel);
+        break;
+        case GOING_OFF:
+            if (streetLight[pwmOutput].currentLevel > OFF && streetLight[pwmOutput].lightType == GAS) {
+                // If it's a gas light simulate the tap being switched off.
+                streetLight[pwmOutput].currentLevel -= LIGHT_LEVEL_STEP;
+            } else {
+                // If electric light, just go off.
+                streetLight[pwmOutput].state = OFF;
+            }
+        break;
+    }
 }

@@ -184,8 +184,16 @@ void lightLED(int pwmOutput) {
     if ((currentTime - streetLight[pwmOutput].lastTime) > streetLight[pwmOutput].flickerDelay) {
         outputLevel(pwmOutput);
         pwm.writeMicroseconds(pwmOutput, streetLight[pwmOutput].currentLevel);
-        // Don't want a flicker if the light is electric so multiplying by the light type sets flicker delay to zero in this case.
-        streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME) * (unsigned long)streetLight[pwmOutput].lightType;
+        // Don't want a flicker if the light is electric.
+        // Using a switch instead now as, although it makes the code slightly bigger, it is slightly faster and easier to follow.
+        switch (streetLight[pwmOutput].lightType) {
+            case ELECTRIC:
+                streetLight[pwmOutput].flickerDelay = 0;
+            break;
+            case GAS:
+                streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME);
+            break;
+        }
         streetLight[pwmOutput].lastTime = currentTime;
     }
 }
@@ -207,10 +215,16 @@ void outputLevel(int pwmOutput) {
         break;
         case ON:
         case WAIT_OFF:
-            // lightType is either ELECTRIC (0), or GAS (1), hence multiplying the variance by the light type will automatically switch the variance off or on depending on light type.
-            streetLight[pwmOutput].currentLevel = PWM_NORMAL_LEVEL - ((random(PWM_VARIANCE * 2) - PWM_VARIANCE) * streetLight[pwmOutput].lightType);
-            // Serial.println("level:");
-            // Serial.println(streetLight[pwmOutput].currentLevel);
+            // There was no discernable benefit in terms of speed when using the switch statement, due to smaller data types in use this time.
+            // However the code was smaller and it's easier to follow, so staying with the switch.
+            switch (streetLight[pwmOutput].lightType) {
+                case ELECTRIC:
+                    streetLight[pwmOutput].currentLevel = PWM_NORMAL_LEVEL;
+                break;
+                case GAS:
+                    streetLight[pwmOutput].currentLevel = random(PWM_MIN_LEVEL, PWM_MAX_LEVEL);
+                break;
+            }
         break;
         case GOING_OFF:
             if (streetLight[pwmOutput].currentLevel > OFF && streetLight[pwmOutput].lightType == GAS) {

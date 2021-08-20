@@ -60,6 +60,16 @@
 #define ELECTRIC    0
 #define GAS         1
 
+struct time {
+    unsigned long timeNow;
+    unsigned long timebefore;
+    unsigned long executionTime;
+    unsigned long averageTime;
+    unsigned long numExecutions;
+};
+
+time myTest;
+
 // Create structure to hold data about the lights
 struct light {
     int state; // Can be OFF, WAIT_ON, GOING_ON, ON, WAIT_OFF, GOING_OFF.
@@ -75,6 +85,7 @@ light streetLight[NUM_PWM_OUTPUTS];
 
 bool requiredState = OFF;
 unsigned long currentTime; // The time, in milliseconds, of the current processing loop.
+unsigned long lastNumExecutions = 0;
 
 // Define the PCA9685 board addresses
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40); //setup the board address - defaults to 0x40 if not specified
@@ -97,6 +108,12 @@ void setup() {
     // }
 
     randomSeed(analogRead(0));
+
+    myTest.timeNow = 0;
+    myTest.timebefore = 0;
+    myTest.executionTime = 0;
+    myTest.averageTime = 0;
+    myTest.numExecutions = 0;
 
     for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
         streetLight[pwmOutput].state = OFF;
@@ -129,6 +146,8 @@ void loop(){
 
     // PROCESS OUTPUTS
     process_outputs();
+    getAverage();
+    displayAverage();
 }
 
 void process_outputs() {
@@ -184,8 +203,28 @@ void lightLED(int pwmOutput) {
     if ((currentTime - streetLight[pwmOutput].lastTime) > streetLight[pwmOutput].flickerDelay) {
         outputLevel(pwmOutput);
         pwm.writeMicroseconds(pwmOutput, streetLight[pwmOutput].currentLevel);
+        // myTest.timebefore = micros();
         // Don't want a flicker if the light is electric so multiplying by the light type sets flicker delay to zero in this case.
-        streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME) * (unsigned long)streetLight[pwmOutput].lightType;
+        // streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME) * (unsigned long)streetLight[pwmOutput].lightType;
+        // Using a switch instead now as, although it makes the code slightly bigger, it is slightly faster.
+        switch (streetLight[pwmOutput].lightType) {
+            case ELECTRIC:
+                streetLight[pwmOutput].flickerDelay = 0;
+            break;
+            case GAS:
+                streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME);
+            break;
+        }
+        // This version had no further speed benefit over the switch and is less easy to read.
+        // if (streetLight[pwmOutput].lightType) {
+            // Gas light.
+            // streetLight[pwmOutput].flickerDelay = random(FLICKER_MIN_TIME, FLICKER_MAX_TIME);
+        // } else {
+            // Electric light.
+            // streetLight[pwmOutput].flickerDelay = 0;
+        // }
+        // myTest.timeNow = micros();
+        // myTest.numExecutions++;
         streetLight[pwmOutput].lastTime = currentTime;
     }
 }
@@ -208,9 +247,20 @@ void outputLevel(int pwmOutput) {
         case ON:
         case WAIT_OFF:
             // lightType is either ELECTRIC (0), or GAS (1), hence multiplying the variance by the light type will automatically switch the variance off or on depending on light type.
-            streetLight[pwmOutput].currentLevel = PWM_NORMAL_LEVEL - ((random(PWM_VARIANCE * 2) - PWM_VARIANCE) * streetLight[pwmOutput].lightType);
-            // Serial.println("level:");
-            // Serial.println(streetLight[pwmOutput].currentLevel);
+        myTest.timebefore = micros();
+            // streetLight[pwmOutput].currentLevel = PWM_NORMAL_LEVEL - ((random(PWM_VARIANCE * 2) - PWM_VARIANCE) * streetLight[pwmOutput].lightType);
+            // There was no discernable benefit in terms of speed when using the switch statement, due to smaller data types in use this time.
+            // However the code was smaller, so staying with the switch.
+            switch (streetLight[pwmOutput].lightType) {
+                case ELECTRIC:
+                    streetLight[pwmOutput].currentLevel = PWM_NORMAL_LEVEL;
+                break;
+                case GAS:
+                    streetLight[pwmOutput].currentLevel = random(PWM_MIN_LEVEL, PWM_MAX_LEVEL);
+                break;
+            }
+        myTest.timeNow = micros();
+        myTest.numExecutions++;
         break;
         case GOING_OFF:
             if (streetLight[pwmOutput].currentLevel > OFF && streetLight[pwmOutput].lightType == GAS) {
@@ -221,5 +271,29 @@ void outputLevel(int pwmOutput) {
                 streetLight[pwmOutput].state = OFF;
             }
         break;
+    }
+}
+
+void getAverage() {
+    unsigned long timeDiff;
+
+    if (myTest.numExecutions > 0 && myTest.numExecutions > lastNumExecutions) {
+        timeDiff = myTest.timeNow - myTest.timebefore;
+        myTest.executionTime += timeDiff;
+        myTest.averageTime = myTest.executionTime / myTest.numExecutions;
+    }
+}
+
+void displayAverage() {
+    unsigned long timeDiff;
+    char buffer[200];
+    
+    if (myTest.numExecutions > 0 && myTest.numExecutions > lastNumExecutions) {
+        timeDiff = myTest.timeNow - myTest.timebefore;
+        // sprintf(buffer, "Time before execution = %lu, time after execution = %lu", myTest.timebefore, myTest.timeNow);
+        // Serial.println(buffer);
+        sprintf(buffer, "Last execution time = %.3lu, Average execution time = %.3lu, Number of executions = %.4lu", timeDiff, myTest.averageTime, myTest.numExecutions);
+        Serial.println(buffer);
+        lastNumExecutions = myTest.numExecutions;
     }
 }

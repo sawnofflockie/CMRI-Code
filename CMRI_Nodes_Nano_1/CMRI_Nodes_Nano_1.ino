@@ -3,6 +3,8 @@
 #include <Auto485.h>
 #include <Adafruit_PWMServoDriver.h>
 
+//#define ENABLE_DEBUG_OUTPUT
+
 // CMRI Settings
 #define CMRI_ADDR   2 //CMRI node address in JMRI
 #define DE_PIN      2
@@ -13,17 +15,10 @@
 #define BAUD_RATE           19200
 #define SERIAL_BAUD_RATE    19200
 
-// -----------------------------
-#define INPUT_RANGE_START    3
-#define INPUT_RANGE_END      6
-#define OUTPUT_RANGE_START   7
-#define OUTPUT_RANGE_END    13 // Pin 13 corresponds to the Arduino on-board LED
-// -----------------------------
-
 #define NUM_PWM_OUTPUTS   3
 
 // Servo frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos, but in this case it is for LEDs.
-#define PWM_FRAME_RATE    120 // Can see 100Hz flicker, so made it a bit faster.
+#define PWM_FRAME_RATE    120 // Can see 100Hz flicker so made it a bit faster. However if modelling fluorescent lights you might want 50Hz (i.e. mains frequency).
 
 #define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
 #define PWM_VARIANCE         512 // Max amount of variance up or down of LED level.
@@ -31,24 +26,24 @@
 #define PWM_MIN_LEVEL   (PWM_NORMAL_LEVEL - PWM_VARIANCE)
 #define PWM_MAX_LEVEL   (PWM_NORMAL_LEVEL + PWM_VARIANCE)
 
-// -------------------
+// -----------------------------
 // All in milliseconds
-// -------------------
+// -----------------------------
 #define FLICKER_MIN_TIME           75
 #define FLICKER_MAX_TIME          350
 
-#define ELECTRIC_WAIT_PERIOD     5000
+#define ELECTRIC_WAIT_PERIOD    30000
 #define MIN_WAIT_PERIOD         20000
 #define MAX_WAIT_PERIOD         30000
 
 #define LIGHT_LEVEL_STEP          100
-// -------------------
+// -----------------------------
 
 // -----------------------------
 // LED street light states
 // -----------------------------
 #define OFF         0 // Light completely extinguished and no change of state imminent.
-#define ON          1 // Light switched on with perhaps some random variations in intensity.
+#define ON          1 // Light switched on with perhaps some random variations in intensity, but no change of state imminent.
 #define WAIT_ON     2 // A change of state to ON has been requested, but the light is waiting for its turn to go on.
 #define GOING_ON    3 // A change to ON is now being actioned and the light is ramping up to operational intensity.
 #define GOING_OFF   4 // A change to OFF is now being actioned and the light is ramping down to zero intensity.
@@ -78,6 +73,7 @@ unsigned long currentTime; // The time, in milliseconds, of the current processi
 
 // Define the PCA9685 board addresses
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(0x40); //setup the board address - defaults to 0x40 if not specified
+// Adafruit_PWMServoDriver pwm2 = Adafruit_PWMServoDriver(0x41); // Second board, address 0x41. Needs pads on board soldering to select address.
 
 // Setup serial communication
 Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
@@ -86,17 +82,7 @@ Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
 CMRI cmri(CMRI_ADDR, CMRI_INPUTS, CMRI_OUTPUTS, bus);
 
 void setup() {
-
-    // SET PINS TO INPUT OR OUTPUT
-    // However in the current setup there are no inputs and all outputs are via the PCA9685 board (pwm).
-    // for (int i=INPUT_RANGE_START; i<=INPUT_RANGE_END; i++) {
-    //        pinMode(i, INPUT_PULLUP);       // define sensor shield pins 3 to 7 as inputs - 5 inputs.
-    // }
-    // for (int i=OUTPUT_RANGE_START; i<=OUTPUT_RANGE_END; i++) {
-    //        pinMode(i, OUTPUT);      // define sensor shield pins 8 to 13 as outputs - 5 outputs, plus pin 13 which is the built-in LED.
-    // }
-
-    randomSeed(analogRead(0));
+    randomSeed(analogRead(0)); // Reads noise on an unconnected pin to seed the random number generator.
 
     for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
         streetLight[pwmOutput].state = OFF;
@@ -109,8 +95,8 @@ void setup() {
         streetLight[pwmOutput].waitStart = 0;
     }
     // Start the serial connection
-    Serial.begin(SERIAL_BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
-    bus.begin(BAUD_RATE);
+    Serial.begin(SERIAL_BAUD_RATE); // Baud rate of the serial monitor used for debug output.
+    bus.begin(BAUD_RATE); // Ensure this matches the baud rate in JMRI
 
     // Initialize PCA9685 board
     pwm.begin();
@@ -119,15 +105,6 @@ void setup() {
 
 void loop(){
     cmri.process();
-
-    // PROCESS SENSORS
-    // Only include lines that are required. This reduces processing time - delete or comment out lines that are not required
-
-    // Do not read 0, 1 or 2
-    // cmri.set_bit(0, !digitalRead(3));  //Bit 0 = address 2001 in JMRI, Light sensor 1
-    // cmri.set_bit(1, !digitalRead(4));  //Bit 1 = address 2002 in JMRI, Light sensor 2
-
-    // PROCESS OUTPUTS
     process_outputs();
 }
 
@@ -157,11 +134,18 @@ void process_outputs() {
                 if (currentTime > streetLight[pwmOutput].waitStart + streetLight[pwmOutput].waitPeriod) {
                     streetLight[pwmOutput].state = GOING_OFF;
                 }
+            break;
             case GOING_ON:
             case GOING_OFF:
             break;
         }
         lightLED(pwmOutput);
+#ifdef ENABLE_DEBUG_OUTPUT
+        Serial.print("pwmOutput = ");
+        Serial.print(pwmOutput);
+        Serial.print(", state= ");
+        Serial.println(streetLight[pwmOutput].state);
+#endif
     }
 }
 
@@ -215,7 +199,7 @@ void outputLevel(int pwmOutput) {
         break;
         case ON:
         case WAIT_OFF:
-            // There was no discernable benefit in terms of speed when using the switch statement, due to smaller data types in use this time.
+            // There was no discernible benefit in terms of speed when using the switch statement, due to smaller data types in use this time.
             // However the code was smaller and it's easier to follow, so staying with the switch.
             switch (streetLight[pwmOutput].lightType) {
                 case ELECTRIC:

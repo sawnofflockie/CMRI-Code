@@ -182,6 +182,22 @@ int outputType[NUMOUTPUTS] = {RELAY, LIGHT};
 unsigned long currentTime; // The time, in milliseconds, of the current processing loop.
 
 // ----------------------------------------------
+// ------------- FUNCTION PROTOTYPES ------------
+// ----------------------------------------------
+//void setup(void);
+//void loop(void);
+void processOutputs(void);
+void processSensors(void);
+void processServos(void);
+servo closeServo(servo);
+servo throwServo(servo);
+servo initialiseServo(servo, int, int, int);
+void process_LED_outputs(bool);
+void setup_wait_period(int);
+void lightLED(int);
+void outputLevel(int);
+
+// ----------------------------------------------
 // ----------------- FUNCTIONS ------------------
 // ----------------------------------------------
 
@@ -247,7 +263,7 @@ void loop(){
 
 // ----------------------------------------------
 
-void processOutputs() {
+void processOutputs(void) {
     // PROCESS OUTPUTS
     // Non servo outputs will start on bit 100, this will be address 1101 in CMRI, bit 101 will be 1102, etc.
     // Only include lines that are required. This reduces processing time - delete or comment out lines that are not required
@@ -264,6 +280,7 @@ void processOutputs() {
         if (opReqState[opNum] != opLastState[opNum]) {
             if (outputType[opNum] == RELAY) {
                 digitalWrite((outputPinNum), opReqState[opNum]);
+            }
             opLastState[opNum] = opReqState[opNum];
         }
     }
@@ -278,7 +295,7 @@ void processOutputs() {
 
 // ----------------------------------------------
 
-void processSensors() {
+void processSensors(void) {
     // PROCESS SENSORS
     // Only include lines that are required. This reduces processing time - delete or comment out lines that are not required
     // Ensure bit address matches pin, i.e. a sensor attached to pin 17 corresponds to bit 13 (because we've skipped pins 0, 1, 2 and 13) which is address 1014 for this CMRI node
@@ -302,7 +319,7 @@ void processSensors() {
 
 // ----------------------------------------------
 
-void processServos() {
+void processServos(void) {
     // PROCESS SERVOS
     // Assume servos start on bit 0 which corresponds to output address 1001
     for (int currentServo = 0; currentServo < NUMSERVOS; currentServo++) {

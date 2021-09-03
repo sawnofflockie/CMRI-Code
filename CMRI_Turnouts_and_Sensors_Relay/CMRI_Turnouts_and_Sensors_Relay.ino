@@ -43,7 +43,7 @@
 // The number of other outputs connected, e.g. lights, frogs etc
 #define NUMOUTPUTS      2
 // The number of other PWM outputs that are not servos, e.g. street light LEDs. These have a separate board.
-#define NUM_PWM_OUTPUTS 3
+#define NUM_PWM_OUTPUTS 6
 
 // The size of the step size used when signals are moving. The smaller the step size the slower the signal will move.
 #define SIGSTEP     3

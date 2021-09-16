@@ -37,6 +37,7 @@
 // Servo frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos
 #define SERVO_FRAME_RATE     50
 #define PWM_FRAME_RATE      120 // Can see 100Hz flicker so made it a bit faster. However if modelling fluorescent lights you might want 50Hz (i.e. mains frequency).
+// #define PWM_FRAME_RATE       50 // For fluorescent lights.
 
 // The number of servos connected
 #define NUMSERVOS       3
@@ -286,11 +287,6 @@ void processOutputs(void) {
     }
     // digitalWrite(46, cmri.get_bit(100)); //Frog Relay 1
     // digitalWrite(47, cmri.get_bit(101)); // Street lights
-    //  digitalWrite(48, cmri.get_bit(102));
-    //  etc...
-    //  digitalWrite(67, cmri.get_bit(121));
-    //  digitalWrite(68, cmri.get_bit(122));
-    //  digitalWrite(69, cmri.get_bit(123));
 }
 
 // ----------------------------------------------
@@ -520,7 +516,7 @@ void setup_wait_period(int pwmOutput) {
 void lightLED(int pwmOutput) {
     if ((currentTime - streetLight[pwmOutput].lastTime) > streetLight[pwmOutput].flickerDelay) {
         outputLevel(pwmOutput);
-        pwm.writeMicroseconds(pwmOutput, streetLight[pwmOutput].currentLevel);
+        pwmLED.writeMicroseconds(pwmOutput, streetLight[pwmOutput].currentLevel);
         // Don't want a flicker if the light is electric.
         // Using a switch instead now as, although it makes the code slightly bigger, it is slightly faster and easier to follow.
         switch (streetLight[pwmOutput].lightType) {

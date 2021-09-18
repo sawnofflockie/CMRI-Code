@@ -45,6 +45,8 @@
 #define NUMOUTPUTS      2
 // The number of other PWM outputs that are not servos, e.g. street light LEDs. These have a separate board.
 #define NUM_PWM_OUTPUTS 6
+#define FIRST_ONE       0
+#define LAST_ONE        (NUM_PWM_OUTPUTS - 1)
 
 // The size of the step size used when signals are moving. The smaller the step size the slower the signal will move.
 #define SIGSTEP     3
@@ -92,7 +94,7 @@
 
 // ==================== Stuff for flickering LEDs ======================
 #define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
-#define PWM_VARIANCE         512 // Max amount of variance up or down of LED level.
+#define PWM_VARIANCE         384 // Max amount of variance up or down of LED level.
 
 #define PWM_MIN_LEVEL   (PWM_NORMAL_LEVEL - PWM_VARIANCE)
 #define PWM_MAX_LEVEL   (PWM_NORMAL_LEVEL + PWM_VARIANCE)
@@ -100,7 +102,7 @@
 // -----------------------------
 // All in milliseconds
 // -----------------------------
-#define FLICKER_MIN_TIME           75
+#define FLICKER_MIN_TIME          100
 #define FLICKER_MAX_TIME          350
 
 #define ELECTRIC_WAIT_PERIOD    30000
@@ -177,6 +179,7 @@ light streetLight[NUM_PWM_OUTPUTS];
 
 bool opLastState[NUMOUTPUTS] = {LOW, LOW};
 bool opReqState[NUMOUTPUTS] = {LOW, LOW};
+bool changingState = false;
 
 int outputType[NUMOUTPUTS] = {RELAY, LIGHT};
 
@@ -273,7 +276,10 @@ void processOutputs(void) {
         int outputPinNum = OUTPUT_RANGE_1_START + opNum;
         int cmriInput = CMRI_INPUT_RANGE_2_START + opNum;
         if (outputType[opNum] == LIGHT) {
-            opReqState[opNum] = cmri.get_bit(cmriInput);
+            if (!changingState) {
+                // only read the input if the system is not in the middle of changing the state of any of the lights.
+                opReqState[opNum] = cmri.get_bit(cmriInput);
+            }
             process_LED_outputs(opReqState[opNum]); // Process LED street lights every time through, in order to process flickers.
         }
         // bool opReqState = cmri.get_bit(100 + opNum);
@@ -462,6 +468,11 @@ void process_LED_outputs(bool requiredState) {
                 if (requiredState == ON) {
                     streetLight[pwmOutput].state = WAIT_ON;
                     setup_wait_period(pwmOutput);
+                    if (pwmOutput == FIRST_ONE) {
+                        changingState = true;
+                    }
+                } else if (pwmOutput == LAST_ONE) {
+                    changingState = false;
                 }
             break;
             case WAIT_ON:
@@ -473,6 +484,11 @@ void process_LED_outputs(bool requiredState) {
                 if (requiredState == OFF) {
                     streetLight[pwmOutput].state = WAIT_OFF;
                     setup_wait_period(pwmOutput);
+                    if (pwmOutput == FIRST_ONE) {
+                        changingState = true;
+                    }
+                } else if (pwmOutput == LAST_ONE) {
+                    changingState = false;
                 }
             break;
             case WAIT_OFF:

@@ -188,8 +188,6 @@ unsigned long currentTime; // The time, in milliseconds, of the current processi
 // ----------------------------------------------
 // ------------- FUNCTION PROTOTYPES ------------
 // ----------------------------------------------
-//void setup(void);
-//void loop(void);
 void processOutputs(void);
 void processSensors(void);
 void processServos(void);
@@ -282,7 +280,6 @@ void processOutputs(void) {
             }
             process_LED_outputs(opReqState[opNum]); // Process LED street lights every time through, in order to process flickers.
         }
-        // bool opReqState = cmri.get_bit(100 + opNum);
         // Only process output if it has changed since the last time.
         if (opReqState[opNum] != opLastState[opNum]) {
             if (outputType[opNum] == RELAY) {

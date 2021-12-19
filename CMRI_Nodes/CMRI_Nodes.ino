@@ -19,6 +19,21 @@
 #define output_range_end 13 // Pin 13 corresponds to the Arduino on-board LED
 // -----------------------------
 
+// -----------------------------
+// LED states
+// -----------------------------
+#define OFF         0 // Light switched off.
+#define ON          1 // Light switched on.
+
+// -----------------------------
+// Global variables
+// -----------------------------
+bool IR_sensor = OFF;
+bool light_sensor_1 = OFF;
+bool light_sensor_2 = OFF;
+bool arduino_LED = OFF;
+bool arduino_last_state = OFF;
+
 // Setup serial communication
 Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
 
@@ -49,11 +64,18 @@ void loop(){
     // Only include lines that are required. This reduces processing time - delete or comment out lines that are not required
 
     // Do not read 0, 1 or 2
-    cmri.set_bit(0, !digitalRead(3));  //Bit 0 = address 1001 in JMRI, IR sensor 1
-    cmri.set_bit(1, !digitalRead(4));  //Bit 1 = address 1002 in JMRI, Light Level Sensor 1
-    cmri.set_bit(2, !digitalRead(5));  //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 1
+    IR_sensor = digitalRead(3);
+    light_sensor_1 = digitalRead(4);
+    light_sensor_2 = digitalRead(5);
+    cmri.set_bit(0, !IR_sensor);  //Bit 0 = address 1001 in JMRI, IR sensor 1
+    cmri.set_bit(1, !light_sensor_1);  //Bit 1 = address 1002 in JMRI, Light Level Sensor 1
+    cmri.set_bit(2, !light_sensor_2);  //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 1
 
     // PROCESS OUTPUTS
     // Pin 13 corresponds to the Arduino on-board LED
-    digitalWrite(13, cmri.get_bit(0));  //Bit 0 = address 1001 in JMRI, LED output 1
+    arduino_LED = cmri.get_bit(0);
+    if (arduino_last_state != arduino_LED) {
+        arduino_last_state = arduino_LED;
+        digitalWrite(13, arduino_LED);  //Bit 0 = address 1001 in JMRI, LED output 1
+    }
 }

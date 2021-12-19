@@ -69,6 +69,8 @@ struct light {
 light streetLight[NUM_PWM_OUTPUTS];
 
 bool requiredState = OFF;
+bool internalReqState = OFF;
+bool currentInternalState = OFF;
 unsigned long currentTime; // The time, in milliseconds, of the current processing loop.
 
 // Define the PCA9685 board addresses
@@ -111,6 +113,7 @@ void loop(){
 void process_outputs() {
     currentTime = millis();
     requiredState = cmri.get_bit(0); //Bit 0 = address 2001 in JMRI, LED output 1
+    processInternalLED();
     for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
         switch (streetLight[pwmOutput].state) {
             case OFF:
@@ -146,6 +149,14 @@ void process_outputs() {
         Serial.print(", state= ");
         Serial.println(streetLight[pwmOutput].state);
 #endif
+    }
+}
+
+void processInternalLED(void) {
+    internalReqState = cmri.get_bit(1); //Bit 1 = address 2002 in JMRI, LED output 2
+    if (currentInternalState != internalReqState) {
+        currentInternalState = internalReqState;
+        digitalWrite(13, internalReqState);
     }
 }
 

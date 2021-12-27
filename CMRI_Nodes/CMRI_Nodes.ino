@@ -59,23 +59,32 @@ void setup() {
 
 void loop(){
     cmri.process();
+    readSensors();
+    sendToCMRI();
+    readFromCMRI();
+    processOutputs();
+}
 
-    // PROCESS SENSORS
-    // Only include lines that are required. This reduces processing time - delete or comment out lines that are not required
-
+void readSensors(void) {
     // Do not read 0, 1 or 2
-    IR_sensor = digitalRead(3);
-    light_sensor_1 = digitalRead(4);
-    light_sensor_2 = digitalRead(5);
-    cmri.set_bit(0, !IR_sensor);  //Bit 0 = address 1001 in JMRI, IR sensor 1
-    cmri.set_bit(1, !light_sensor_1);  //Bit 1 = address 1002 in JMRI, Light Level Sensor 1
-    cmri.set_bit(2, !light_sensor_2);  //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 1
+    IR_sensor = digitalRead(3);         // Pin 3 on Arduino
+    light_sensor_1 = digitalRead(4);    // Pin 4 on Arduino
+    light_sensor_2 = digitalRead(5);    // Pin 5 on Arduino
+}
 
-    // PROCESS OUTPUTS
-    // Pin 13 corresponds to the Arduino on-board LED
-    arduino_LED = cmri.get_bit(0);
+void sendToCMRI(void) {
+    cmri.set_bit(0, !IR_sensor);        //Bit 0 = address 1001 in JMRI, IR sensor 1
+    cmri.set_bit(1, !light_sensor_1);   //Bit 1 = address 1002 in JMRI, Light Level Sensor 1
+    cmri.set_bit(2, !light_sensor_2);   //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 1
+}
+
+void readFromCMRI(void) {
+    arduino_LED = cmri.get_bit(0);      // Bit 0 = address 1001 in JRMI, LED output 1
+}
+
+void processOutputs(void) {
     if (arduino_last_state != arduino_LED) {
         arduino_last_state = arduino_LED;
-        digitalWrite(13, arduino_LED);  //Bit 0 = address 1001 in JMRI, LED output 1
+        digitalWrite(13, arduino_LED);  // Pin 13 corresponds to the Arduino on-board LED
     }
 }

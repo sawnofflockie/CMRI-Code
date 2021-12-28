@@ -18,7 +18,8 @@
 // Frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos, but in this case it is for LEDs.
 #define PWM_FRAME_RATE       120 // Can see 100Hz flicker so made it a bit faster. However if modelling fluorescent lights you might want 50Hz (i.e. mains frequency).
 #define PWM_NORMAL_LEVEL    3072 // Max level is 4096, chose 3072 so there is room to go up as well as down.
-#define NUM_PWM_OUTPUTS        3
+#define PWM_MAX_LEVEL       4096
+#define NUM_PWM_OUTPUTS        4 // Number of LEDs indicating time of day; DAYTIME, EVENING, NIGHT, DAWN
 
 #define PCA9685_ADDR        0x40
 
@@ -36,6 +37,7 @@
 #define DAYTIME                0
 #define EVENING                1
 #define NIGHT                  2
+#define DAWN                   3
 
 // -----------------------------
 // Declare global variables
@@ -61,12 +63,12 @@ CMRI cmri(CMRI_ADDR, CMRI_INPUTS, CMRI_OUTPUTS, bus);
 // ----------------------------------------------
 // ------------- FUNCTION PROTOTYPES ------------
 // ----------------------------------------------
-// void setup(void);
-// void loop(void);
-// void readFromCMRI(void);
-// int setDayTime(void);
-// void setLights(int timeOfDay);
-// void illuminateLED(int level[NUM_PWM_OUTPUTS], int timeOfDay);
+void setup(void);
+void loop(void);
+void readFromCMRI(void);
+int setDayTime(int lastDayTime);
+void setLights(int timeOfDay);
+int illuminateLED(int level[NUM_PWM_OUTPUTS], int timeOfDay, int lastTimeOfDay);
 // ----------------------------------------------
 // ----------------- FUNCTIONS ------------------
 // ----------------------------------------------
@@ -82,12 +84,14 @@ void setup(void) {
 }
 
 void loop(void){
-    int timeOfDay = DAYTIME;
+    int timeOfDay = NIGHT;
+//    int lastTimeOfDay = NIGHT;
+
     cmri.process();
     readFromCMRI();
-    timeOfDay = setDayTime;
+    timeOfDay = setDayTime(lastTimeOfDay);
     setLights(timeOfDay);
-    illuminateLED(level, timeOfDay);
+    lastTimeOfDay = illuminateLED(level, timeOfDay, lastTimeOfDay);
 }
 
 void readFromCMRI(void) {
@@ -95,12 +99,24 @@ void readFromCMRI(void) {
     lightLevel2 = cmri.get_bit(1);  // Bit 1 = address 3002 in JMRI
 }
 
-int setDayTime(void) {
-    int timeOfDay = DAYTIME;
-    if (lightLevel1 && lightLevel2) {
-        timeOfDay = DAYTIME;
-    } else if ((lightLevel1 && !lightLevel2) || (!lightLevel1 && lightLevel2)) {
-        timeOfDay = EVENING;
+int setDayTime(int lastTimeOfDay) {
+    int timeOfDay;
+    if (lightLevel2) {
+        if (lightLevel1) {
+            timeOfDay = DAYTIME;
+        } else {
+            switch (lastTimeOfDay) {
+                case DAYTIME:
+                    timeOfDay = EVENING;
+                break;
+                case NIGHT:
+                    timeOfDay = DAWN;
+                break;
+                default:
+                    timeOfDay = lastTimeOfDay;
+                break;
+            }
+        }
     } else {
         timeOfDay = NIGHT;
     }
@@ -108,12 +124,16 @@ int setDayTime(void) {
 }
 
 void setLights(int timeOfDay) {
+    // +++++++++++++++++++
+    // Don't need this!!!! - re-write illuminateLED to just use timeOfDay.
+    // +++++++++++++++++++
     switch (timeOfDay) {
         case DAYTIME:
             if (level[DAYTIME] == OFF) {
                 level[DAYTIME] = PWM_NORMAL_LEVEL;
                 level[EVENING] = OFF;
                 level[NIGHT] = OFF;
+                level[DAWN] = OFF;
             }
         break;
         case EVENING:
@@ -121,6 +141,7 @@ void setLights(int timeOfDay) {
                 level[DAYTIME] = OFF;
                 level[EVENING] = PWM_NORMAL_LEVEL;
                 level[NIGHT] = OFF;
+                level[DAWN] = OFF;
             }
         break;
         case NIGHT:
@@ -128,16 +149,26 @@ void setLights(int timeOfDay) {
                 level[DAYTIME] = OFF;
                 level[EVENING] = OFF;
                 level[NIGHT] = PWM_NORMAL_LEVEL;
+                level[DAWN] = OFF;
+            }
+        break;
+        case DAWN:
+            if (level[DAWN] == OFF) {
+                level[DAYTIME] = OFF;
+                level[EVENING] = OFF;
+                level[NIGHT] = OFF;
+                level[DAWN] = PWM_NORMAL_LEVEL;
             }
         break;
     }
 }
 
-void illuminateLED(int level[NUM_PWM_OUTPUTS], int timeOfDay) {
-    for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
-        if (lastTimeOfDay != timeOfDay) {
+int illuminateLED(int level[NUM_PWM_OUTPUTS], int timeOfDay, int lastTimeOfDay) {
+    if (lastTimeOfDay != timeOfDay) {
+        for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
             pwm.writeMicroseconds(pwmOutput, level[pwmOutput]);
         }
+        lastTimeOfDay = timeOfDay;
     }
-    lastTimeOfDay = timeOfDay;
+    return lastTimeOfDay;
 }

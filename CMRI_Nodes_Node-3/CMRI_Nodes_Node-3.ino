@@ -46,9 +46,6 @@
 bool lightLevel1 = OFF;
 bool lightLevel2 = OFF;
 
-int level[NUM_PWM_OUTPUTS];
-
-// int timeOfDay = DAYTIME;
 int lastTimeOfDay = DAYTIME;
 
 // Define the PCA9685 board addresses
@@ -67,8 +64,7 @@ void setup(void);
 void loop(void);
 void readFromCMRI(void);
 int setDayTime(int lastDayTime);
-void setLights(int timeOfDay);
-int illuminateLED(int level[NUM_PWM_OUTPUTS], int timeOfDay, int lastTimeOfDay);
+int illuminateLED(int timeOfDay, int lastTimeOfDay);
 // ----------------------------------------------
 // ----------------- FUNCTIONS ------------------
 // ----------------------------------------------
@@ -84,14 +80,12 @@ void setup(void) {
 }
 
 void loop(void){
-    int timeOfDay = NIGHT;
-//    int lastTimeOfDay = NIGHT;
+    int timeOfDay = DAYTIME;
 
     cmri.process();
     readFromCMRI();
     timeOfDay = setDayTime(lastTimeOfDay);
-    setLights(timeOfDay);
-    lastTimeOfDay = illuminateLED(level, timeOfDay, lastTimeOfDay);
+    lastTimeOfDay = illuminateLED(timeOfDay, lastTimeOfDay);
 }
 
 void readFromCMRI(void) {
@@ -123,50 +117,17 @@ int setDayTime(int lastTimeOfDay) {
     return timeOfDay;
 }
 
-void setLights(int timeOfDay) {
-    // +++++++++++++++++++
-    // Don't need this!!!! - re-write illuminateLED to just use timeOfDay.
-    // +++++++++++++++++++
-    switch (timeOfDay) {
-        case DAYTIME:
-            if (level[DAYTIME] == OFF) {
-                level[DAYTIME] = PWM_NORMAL_LEVEL;
-                level[EVENING] = OFF;
-                level[NIGHT] = OFF;
-                level[DAWN] = OFF;
-            }
-        break;
-        case EVENING:
-            if (level[EVENING] == OFF) {
-                level[DAYTIME] = OFF;
-                level[EVENING] = PWM_NORMAL_LEVEL;
-                level[NIGHT] = OFF;
-                level[DAWN] = OFF;
-            }
-        break;
-        case NIGHT:
-            if (level[NIGHT] == OFF) {
-                level[DAYTIME] = OFF;
-                level[EVENING] = OFF;
-                level[NIGHT] = PWM_NORMAL_LEVEL;
-                level[DAWN] = OFF;
-            }
-        break;
-        case DAWN:
-            if (level[DAWN] == OFF) {
-                level[DAYTIME] = OFF;
-                level[EVENING] = OFF;
-                level[NIGHT] = OFF;
-                level[DAWN] = PWM_NORMAL_LEVEL;
-            }
-        break;
-    }
-}
-
-int illuminateLED(int level[NUM_PWM_OUTPUTS], int timeOfDay, int lastTimeOfDay) {
+int illuminateLED(int timeOfDay, int lastTimeOfDay) {
     if (lastTimeOfDay != timeOfDay) {
         for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
-            pwm.writeMicroseconds(pwmOutput, level[pwmOutput]);
+            int level;
+            if (pwmOutput == timeOfDay) {
+                level = PWM_NORMAL_LEVEL;
+            }
+            else {
+                level = OFF;
+            }
+            pwm.writeMicroseconds(pwmOutput, level);
         }
         lastTimeOfDay = timeOfDay;
     }

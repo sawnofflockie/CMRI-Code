@@ -116,7 +116,8 @@ void setup(void) {
 
     // Start the serial connection
     Serial.begin(SERIAL_BAUD_RATE); // Baud rate of the serial monitor used for debug output.
-    bus.begin(BAUD_RATE); // Ensure this matches the baud rate in JMRI
+    // bus.begin(BAUD_RATE, SERIAL_8N2); // May need this version (8 bit, no parity, 2 stop bits) if JMRI doesn't understand the standard single stop bit.
+    bus.begin(BAUD_RATE); // Ensure this matches the baud rate in JMRI.
 
     // Initialise the timer interrupt
     Timer1.initialize(INT_PERIOD);
@@ -132,22 +133,19 @@ void setup(void) {
 }
 
 void loop(void){
-    int timeOfDay = DAYTIME;
+    int timeOfDay;
 
     timeOfDay = setDayTime(lastTimeOfDay);
     lastTimeOfDay = illuminateLED(timeOfDay, lastTimeOfDay);
     setMinMax(timeOfDay);
-    
-//#ifdef ENABLE_DEBUG_OUTPUT
+    chooseSound();
+#ifdef ENABLE_DEBUG_OUTPUT
 //    Serial.print("Time of day = ");
 //    Serial.println(timeOfDay);
 //    Serial.print("min = ");
 //    Serial.print(min);
 //    Serial.print(", max = ");
 //    Serial.println(max);
-//#endif
-    chooseSound();
-#ifdef ENABLE_DEBUG_OUTPUT
     Serial.print("lightLevel1 = ");
     Serial.print(lightLevel1);
     Serial.print(", lightLevel2 = ");
@@ -193,8 +191,7 @@ int illuminateLED(int timeOfDay, int lastTimeOfDay) {
             int level;
             if (pwmOutput == timeOfDay) {
                 level = PWM_NORMAL_LEVEL;
-            }
-            else {
+            } else {
                 level = OFF;
             }
             pwm.writeMicroseconds(pwmOutput, level);
@@ -408,9 +405,9 @@ void chooseSound(void) {
             case 17:
                 #ifdef ENABLE_DEBUG_OUTPUT
                   Serial.print("case 17: ");
-                  Serial.println("bird 4");
+                  Serial.println("bird 3");
                 #endif
-                bird_4();
+                bird_3();
             break;
             default:
                 #ifdef ENABLE_DEBUG_OUTPUT

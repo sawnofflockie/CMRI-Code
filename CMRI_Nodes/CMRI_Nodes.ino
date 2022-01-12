@@ -74,8 +74,8 @@ void readSensors(void) {
 
 void sendToCMRI(void) {
     cmri.set_bit(0, !IR_sensor);        //Bit 0 = address 1001 in JMRI, IR sensor 1
-    cmri.set_bit(1, !light_sensor_1);   //Bit 1 = address 1002 in JMRI, Light Level Sensor 1
-    cmri.set_bit(2, !light_sensor_2);   //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 1
+    cmri.set_bit(1, !light_sensor_1);   //Bit 1 = address 1002 in JMRI, Light Level Sensor 2
+    cmri.set_bit(2, !light_sensor_2);   //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 3
 }
 
 void readFromCMRI(void) {

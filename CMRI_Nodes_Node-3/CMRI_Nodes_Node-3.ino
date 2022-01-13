@@ -49,10 +49,12 @@
 #define SOFT_PIN               5
 
 // -----------------------------
-// Interrupt Frequency
+// Interrupt Period
 // -----------------------------
 
-#define INT_PERIOD          1000 // Number of micro seconds, so 1000 is once every milli second, so the interrupt will activate 1000 times a second.
+#define INT_PERIOD          5000    // Number of micro seconds, so 5000 is once every 5 milli seconds (200 times a second), so the interrupt will activate 200 times a second.
+                                    // The Arduino has a receive buffer of 64 characters, hence with 200 interrupts a second it can receive 12800 characters, or approx. 128000 bits.
+                                    // i.e. more than 115200 baud would be capable of.
 
 // -----------------------------
 // Declare global variables

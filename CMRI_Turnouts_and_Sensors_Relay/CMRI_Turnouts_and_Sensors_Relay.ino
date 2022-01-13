@@ -188,6 +188,9 @@ unsigned long currentTime; // The time, in milliseconds, of the current processi
 // ----------------------------------------------
 // ------------- FUNCTION PROTOTYPES ------------
 // ----------------------------------------------
+
+void setup(void);
+void loop(loop);
 void processOutputs(void);
 void processSensors(void);
 void processServos(void);
@@ -203,7 +206,7 @@ void outputLevel(int);
 // ----------------- FUNCTIONS ------------------
 // ----------------------------------------------
 
-void setup() {
+void setup(void) {
     int servoStart[NUMSERVOS] = {POINT_1_START, SIG_HEAD_1_START, SIG_HEAD_2_START};
     int servoEnd[NUMSERVOS] = {POINT_1_END, SIG_HEAD_1_END, SIG_HEAD_2_END};
 
@@ -268,7 +271,6 @@ void loop(){
 void processOutputs(void) {
     // PROCESS OUTPUTS
     // Non servo outputs will start on bit 100, this will be address 1101 in CMRI, bit 101 will be 1102, etc.
-    // Only include lines that are required. This reduces processing time - delete or comment out lines that are not required
 
     for (int opNum = 0; opNum < NUMOUTPUTS; opNum++) {
         int outputPinNum = OUTPUT_RANGE_1_START + opNum;

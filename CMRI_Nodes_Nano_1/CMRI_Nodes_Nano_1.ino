@@ -2,6 +2,7 @@
 #include <CMRI.h>
 #include <Auto485.h>
 #include <Adafruit_PWMServoDriver.h>
+#include <TimerOne.h>
 
 //#define ENABLE_DEBUG_OUTPUT
 
@@ -55,6 +56,14 @@
 #define ELECTRIC    0
 #define GAS         1
 
+// -----------------------------
+// Interrupt Period
+// -----------------------------
+
+#define INT_PERIOD          5000    // Number of micro seconds, so 5000 is once every 5 milli seconds (200 times a second), so the interrupt will activate 200 times a second.
+                                    // The Arduino has a receive buffer of 64 characters, hence with 200 interrupts a second it can receive 12800 characters, or approx. 128000 bits.
+                                    // i.e. more than 115200 baud would be capable of.
+
 // Create structure to hold data about the lights
 struct light {
     int state; // Can be OFF, WAIT_ON, GOING_ON, ON, WAIT_OFF, GOING_OFF.
@@ -83,7 +92,24 @@ Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
 // Define CMRI connection with 24 inputs and 48 outputs
 CMRI cmri(CMRI_ADDR, CMRI_INPUTS, CMRI_OUTPUTS, bus);
 
-void setup() {
+// ----------------------------------------------
+// ------------- FUNCTION PROTOTYPES ------------
+// ----------------------------------------------
+
+void setup(void);
+void loop(void);
+void readFromCMRI(void);
+void process_outputs(void);
+void processInternalLED(void);
+void setup_wait_period(int pwmOutput);
+void lightLED(int pwmOutput);
+void outputLevel(int pwmOutput);
+
+// ----------------------------------------------
+// ----------------- FUNCTIONS ------------------
+// ----------------------------------------------
+
+void setup(void) {
     randomSeed(analogRead(0)); // Reads noise on an unconnected pin to seed the random number generator.
 
     for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
@@ -103,16 +129,25 @@ void setup() {
     // Initialize PCA9685 board
     pwm.begin();
     pwm.setPWMFreq(PWM_FRAME_RATE);  // This is the maximum PWM frequency
+
+    // Initialise the timer interrupt
+    Timer1.initialize(INT_PERIOD);
+    Timer1.attachInterrupt(readFromCMRI);
 }
 
-void loop(){
-    cmri.process();
+void loop(void){
     process_outputs();
 }
 
-void process_outputs() {
-    currentTime = millis();
+void readFromCMRI(void) {
+    // Called via timer1 interrupt.
+    cmri.process();
     requiredState = cmri.get_bit(0); //Bit 0 = address 2001 in JMRI, LED output 1
+    internalReqState = cmri.get_bit(1); //Bit 1 = address 2002 in JMRI, LED output 2
+}
+
+void process_outputs(void) {
+    currentTime = millis();
     processInternalLED();
     for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
         switch (streetLight[pwmOutput].state) {
@@ -153,7 +188,6 @@ void process_outputs() {
 }
 
 void processInternalLED(void) {
-    internalReqState = cmri.get_bit(1); //Bit 1 = address 2002 in JMRI, LED output 2
     if (currentInternalState != internalReqState) {
         currentInternalState = internalReqState;
         digitalWrite(13, internalReqState);

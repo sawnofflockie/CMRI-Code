@@ -86,6 +86,7 @@ CMRI cmri(CMRI_ADDR, CMRI_INPUTS, CMRI_OUTPUTS, bus);
 // ----------------------------------------------
 // ------------- FUNCTION PROTOTYPES ------------
 // ----------------------------------------------
+
 void setup(void);
 void loop(void);
 void readFromCMRI(void);

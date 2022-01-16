@@ -14,7 +14,7 @@
 #define CMRI_INPUTS           24
 #define CMRI_OUTPUTS          48
 
-#define BAUD_RATE          19200
+#define BAUD_RATE          57600
 #define SERIAL_BAUD_RATE   19200
 
 // Frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos, but in this case it is for LEDs.
@@ -117,8 +117,10 @@ void setup(void) {
 
     randomSeed(analogRead(0)); // Reads noise on an unconnected pin to seed the random number generator.
 
-    // Start the serial connection
+    // Start the serial connections
+#ifdef ENABLE_DEBUG_OUTPUT
     Serial.begin(SERIAL_BAUD_RATE); // Baud rate of the serial monitor used for debug output.
+#endif
     // bus.begin(BAUD_RATE, SERIAL_8N2); // May need this version (8 bit, no parity, 2 stop bits) if JMRI doesn't understand the standard single stop bit.
     bus.begin(BAUD_RATE); // Ensure this matches the baud rate in JMRI.
 

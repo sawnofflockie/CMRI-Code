@@ -10,7 +10,7 @@
 #define CMRI_INPUTS 24
 #define CMRI_OUTPUTS 48
 
-#define BAUD_RATE 19200
+#define BAUD_RATE 57600
 #define SERIAL_BAUD_RATE 19200
 
 // -----------------------------
@@ -77,8 +77,10 @@ void setup(void) {
            pinMode(i, OUTPUT);      // define sensor shield pins 8 to 13 as outputs - 5 outputs, plus pin 13 which is the built-in LED.
     }
 
-    // Start the serial connection
+    // Start the serial connections
+#ifdef ENABLE_DEBUG_OUTPUT
     Serial.begin(SERIAL_BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
+#endif
     bus.begin(BAUD_RATE);
 
     // Initialise the timer interrupt

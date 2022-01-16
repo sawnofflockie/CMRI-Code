@@ -13,7 +13,7 @@
 #define CMRI_INPUTS     24
 #define CMRI_OUTPUTS    48
 
-#define BAUD_RATE           19200
+#define BAUD_RATE           57600
 #define SERIAL_BAUD_RATE    19200
 
 #define NUM_PWM_OUTPUTS   3
@@ -122,8 +122,10 @@ void setup(void) {
         streetLight[pwmOutput].waitPeriod = 0;
         streetLight[pwmOutput].waitStart = 0;
     }
-    // Start the serial connection
+    // Start the serial connections
+#ifdef ENABLE_DEBUG_OUTPUT
     Serial.begin(SERIAL_BAUD_RATE); // Baud rate of the serial monitor used for debug output.
+#endif
     bus.begin(BAUD_RATE); // Ensure this matches the baud rate in JMRI
 
     // Initialize PCA9685 board

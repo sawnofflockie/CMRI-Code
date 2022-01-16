@@ -267,20 +267,19 @@ void bird_1(void) {
 }
 
 void bird_2(void) {
-    for (int i=0; i < 8; i++) {
-        tone(90, 136, 100, LOUD_PIN);
+    for (int i=0; i < 10; i++) {
+        upTone(random(300, 400), 200, 1, LOUD_PIN);
+        delay(2);
     }
     delay(90);
-    for (int i=0; i < 8; i++) {
-        tone(90, 136, 100, LOUD_PIN);
+    for (int i=0; i < 5; i++) {
+        downTone(200, random(300, 400), 1, LOUD_PIN);
+        delay(2);
     }
     delay(90);
-    for (int i=0; i < 8; i++) {
-        tone(90, 136, 100, LOUD_PIN);
-    }
-    delay(90);
-    for (int i=0; i < 8; i++) {
-        tone(90, 136, 100, LOUD_PIN);
+    for (int i=0; i < 10; i++) {
+        upTone(random(300, 400), 200, 1, LOUD_PIN);
+        delay(2);
     }
     startWait(random(100, 500));
 }

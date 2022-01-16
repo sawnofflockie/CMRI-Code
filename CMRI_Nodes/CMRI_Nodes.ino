@@ -1,6 +1,7 @@
 // Include libraries
 #include <CMRI.h>
 #include <Auto485.h>
+#include <TimerOne.h>
 
 // CMRI Settings
 #define CMRI_ADDR 1 //CMRI node address in JMRI
@@ -26,6 +27,14 @@
 #define ON          1 // Light switched on.
 
 // -----------------------------
+// Interrupt Period
+// -----------------------------
+
+#define INT_PERIOD          5000    // Number of micro seconds, so 5000 is once every 5 milli seconds (200 times a second), so the interrupt will activate 200 times a second.
+                                    // The Arduino has a receive buffer of 64 characters, hence with 200 interrupts a second it can receive 12800 characters, or approx. 128000 bits.
+                                    // i.e. more than 115200 baud would be capable of.
+
+// -----------------------------
 // Global variables
 // -----------------------------
 bool IR_sensor = OFF;
@@ -40,7 +49,23 @@ Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
 // Define CMRI connection with 64 inputs and 128 outputs
 CMRI cmri(CMRI_ADDR, CMRI_INPUTS, CMRI_OUTPUTS, bus);
 
-void setup() {
+// ----------------------------------------------
+// ------------- FUNCTION PROTOTYPES ------------
+// ----------------------------------------------
+
+void setup(void);
+void loop(void);
+void send_and_receive_CMRI(void);
+void readSensors(void);
+void sendToCMRI(void);
+void readFromCMRI(void);
+void processOutputs(void);
+
+// ----------------------------------------------
+// ----------------- FUNCTIONS ------------------
+// ----------------------------------------------
+
+void setup(void) {
 
     // SET PINS TO INPUT OR OUTPUT
 
@@ -55,14 +80,22 @@ void setup() {
     // Start the serial connection
     Serial.begin(SERIAL_BAUD_RATE); //Baud rate of 19200, ensure this matches the baud rate in JMRI, using a faster rate can make processing faster but can also result in incomplete data
     bus.begin(BAUD_RATE);
+
+    // Initialise the timer interrupt
+    Timer1.initialize(INT_PERIOD);
+    Timer1.attachInterrupt(send_and_receive_CMRI);
+
 }
 
-void loop(){
-    cmri.process();
+void loop(void) {
     readSensors();
+    processOutputs();
+}
+
+void send_and_receive_CMRI(void) {
+    cmri.process();
     sendToCMRI();
     readFromCMRI();
-    processOutputs();
 }
 
 void readSensors(void) {

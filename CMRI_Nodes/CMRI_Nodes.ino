@@ -10,7 +10,7 @@
 #define CMRI_INPUTS 24
 #define CMRI_OUTPUTS 48
 
-#define BAUD_RATE 57600
+#define BAUD_RATE 115200
 #define SERIAL_BAUD_RATE 19200
 
 // -----------------------------
@@ -37,10 +37,10 @@
 // -----------------------------
 // Global variables
 // -----------------------------
-bool IR_sensor = OFF;
-bool light_sensor_1 = OFF;
-bool light_sensor_2 = OFF;
-bool arduino_LED = OFF;
+volatile bool IR_sensor = OFF;
+volatile bool light_sensor_1 = OFF;
+volatile bool light_sensor_2 = OFF;
+volatile bool arduino_LED = OFF;
 bool arduino_last_state = OFF;
 
 // Setup serial communication
@@ -56,9 +56,9 @@ CMRI cmri(CMRI_ADDR, CMRI_INPUTS, CMRI_OUTPUTS, bus);
 void setup(void);
 void loop(void);
 void send_and_receive_CMRI(void);
-void readSensors(void);
-void sendToCMRI(void);
-void readFromCMRI(void);
+// void readSensors(void);
+// void sendToCMRI(void);
+// void readFromCMRI(void);
 void processOutputs(void);
 
 // ----------------------------------------------
@@ -90,32 +90,43 @@ void setup(void) {
 }
 
 void loop(void) {
-    readSensors();
+    // readSensors();
     processOutputs();
 }
 
 void send_and_receive_CMRI(void) {
     cmri.process();
-    sendToCMRI();
-    readFromCMRI();
-}
-
-void readSensors(void) {
+    // Read sensors
     // Do not read 0, 1 or 2
     IR_sensor = digitalRead(3);         // Pin 3 on Arduino
     light_sensor_1 = digitalRead(4);    // Pin 4 on Arduino
     light_sensor_2 = digitalRead(5);    // Pin 5 on Arduino
-}
-
-void sendToCMRI(void) {
+    // Send to CMRI
     cmri.set_bit(0, !IR_sensor);        //Bit 0 = address 1001 in JMRI, IR sensor 1
     cmri.set_bit(1, !light_sensor_1);   //Bit 1 = address 1002 in JMRI, Light Level Sensor 2
     cmri.set_bit(2, !light_sensor_2);   //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 3
-}
-
-void readFromCMRI(void) {
+    // sendToCMRI();
+    //Read from CMRI
+    // readFromCMRI();
     arduino_LED = cmri.get_bit(0);      // Bit 0 = address 1001 in JRMI, LED output 1
 }
+
+// void readSensors(void) {
+    // Do not read 0, 1 or 2
+    // IR_sensor = digitalRead(3);         // Pin 3 on Arduino
+    // light_sensor_1 = digitalRead(4);    // Pin 4 on Arduino
+    // light_sensor_2 = digitalRead(5);    // Pin 5 on Arduino
+// }
+
+// void sendToCMRI(void) {
+    // cmri.set_bit(0, !IR_sensor);        //Bit 0 = address 1001 in JMRI, IR sensor 1
+    // cmri.set_bit(1, !light_sensor_1);   //Bit 1 = address 1002 in JMRI, Light Level Sensor 2
+    // cmri.set_bit(2, !light_sensor_2);   //Bit 2 = address 1003 in JMRI, Home made Light Level Sensor 3
+// }
+
+// void readFromCMRI(void) {
+    // arduino_LED = cmri.get_bit(0);      // Bit 0 = address 1001 in JRMI, LED output 1
+// }
 
 void processOutputs(void) {
     if (arduino_last_state != arduino_LED) {

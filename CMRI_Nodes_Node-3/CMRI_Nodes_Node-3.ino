@@ -14,7 +14,7 @@
 #define CMRI_INPUTS           24
 #define CMRI_OUTPUTS          48
 
-#define BAUD_RATE          57600
+#define BAUD_RATE          115200
 #define SERIAL_BAUD_RATE   19200
 
 // Frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos, but in this case it is for LEDs.

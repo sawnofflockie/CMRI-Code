@@ -13,7 +13,7 @@
 #define CMRI_INPUTS     24
 #define CMRI_OUTPUTS    48
 
-#define BAUD_RATE           57600
+#define BAUD_RATE           115200
 #define SERIAL_BAUD_RATE    19200
 
 #define NUM_PWM_OUTPUTS   3
@@ -77,8 +77,8 @@ struct light {
 
 light streetLight[NUM_PWM_OUTPUTS];
 
-bool requiredState = OFF;
-bool internalReqState = OFF;
+volatile bool requiredState = OFF;
+volatile bool internalReqState = OFF;
 bool currentInternalState = OFF;
 unsigned long currentTime; // The time, in milliseconds, of the current processing loop.
 

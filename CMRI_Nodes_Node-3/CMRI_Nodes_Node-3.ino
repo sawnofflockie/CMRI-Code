@@ -1,5 +1,6 @@
 
 // Include libraries
+#include <Wire.h>
 #include <CMRI.h>
 #include <Auto485.h>
 #include <Adafruit_PWMServoDriver.h>
@@ -14,7 +15,7 @@
 #define CMRI_INPUTS           24
 #define CMRI_OUTPUTS          48
 
-#define BAUD_RATE          115200
+#define BAUD_RATE          19200
 #define SERIAL_BAUD_RATE   19200
 
 // Frame rate must be 50Hz for analogue servos, can be up to 333Hz for digital servos, but in this case it is for LEDs.
@@ -52,7 +53,7 @@
 // Interrupt Period
 // -----------------------------
 
-#define INT_PERIOD          5000    // Number of micro seconds, so 5000 is once every 5 milli seconds (200 times a second), so the interrupt will activate 200 times a second.
+#define INT_PERIOD         28572    // Number of micro seconds, so 5000 is once every 5 milli seconds (200 times a second), so the interrupt will activate 200 times a second.
                                     // The Arduino has a receive buffer of 64 characters, hence with 200 interrupts a second it can receive 12800 characters, or approx. 128000 bits.
                                     // i.e. more than 115200 baud would be capable of.
 
@@ -195,11 +196,13 @@ int illuminateLED(int timeOfDay, int lastTimeOfDay) {
         for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
             int level;
             if (pwmOutput == timeOfDay) {
-                level = PWM_NORMAL_LEVEL;
+                // level = PWM_NORMAL_LEVEL;
+                level = HIGH;
             } else {
-                level = OFF;
+                level = LOW;
             }
-            pwm.writeMicroseconds(pwmOutput, level);
+            // pwm.writeMicroseconds(pwmOutput, level);
+            digitalWrite(pwmOutput + 6, level);
         }
         lastTimeOfDay = timeOfDay;
     }

@@ -3,7 +3,7 @@
 #include <Wire.h>
 #include <CMRI.h>
 #include <Auto485.h>
-// #include <Adafruit_PWMServoDriver.h>
+#include <Adafruit_PWMServoDriver.h>
 #include <TimerOne.h>
 
 //#define ENABLE_DEBUG_OUTPUT
@@ -76,7 +76,7 @@ unsigned long waitPeriod;   // How long to wait, in milliseconds.
 unsigned long endTime;      // Time at which the wait period ends, in milliseconds.
 
 // Define the PCA9685 board addresses
-// Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(PCA9685_ADDR); //setup the board address - defaults to 0x40 if not specified
+Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver(PCA9685_ADDR); //setup the board address - defaults to 0x40 if not specified
 
 // Setup serial communication
 Auto485 bus(DE_PIN); // Arduino pin 2 -> MAX485 DE and RE pins
@@ -130,8 +130,8 @@ void setup(void) {
     Timer1.attachInterrupt(readFromCMRI);
 
     // Initialize PCA9685 board
-    // pwm.begin();
-    // pwm.setPWMFreq(PWM_FRAME_RATE);  // This is the maximum PWM frequency
+    pwm.begin();
+    pwm.setPWMFreq(PWM_FRAME_RATE);  // This is the maximum PWM frequency
     
     // Set up sound output pins
     pinMode(LOUD_PIN, OUTPUT); // Loud - Pin D2

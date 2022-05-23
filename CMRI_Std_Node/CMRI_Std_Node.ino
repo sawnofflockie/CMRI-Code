@@ -2,6 +2,14 @@
 // Standard CMRI sensor node (Arduino Nano)
 // ========================================
 
+
+
+// ======================================================
+// CURRENTLY SET UP TO TEST BOARD WITH 2 LIGHT SENSORS!!!
+// ======================================================
+
+
+
 // Include libraries
 #include <Wire.h>
 #include <CMRI.h>

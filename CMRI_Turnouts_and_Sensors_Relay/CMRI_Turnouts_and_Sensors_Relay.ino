@@ -16,6 +16,7 @@
 #include <Adafruit_PWMServoDriver.h>
 #include <CMRI.h>
 #include <Auto485.h>
+#include <TimerOne.h>
 
 // ----------------------------------------------
 // -------------- Define constants --------------
@@ -129,6 +130,14 @@
 #define GAS         1
 // ================= End of stuff for flickering LEDs ==================
 
+// -----------------------------
+// Interrupt Period
+// -----------------------------
+
+#define INT_PERIOD         28572    // Number of micro seconds, so 5000 is once every 5 milli seconds (200 times a second), so the interrupt will activate 200 times a second.
+                                    // The Arduino has a receive buffer of 64 characters, hence with 200 interrupts a second it can receive 12800 characters, or approx. 128000 bits.
+                                    // i.e. more than 115200 baud would be capable of.
+
 // ----------------------------------------------
 // -------------- Set up hardware ---------------
 // ----------------------------------------------
@@ -162,7 +171,7 @@ struct servo {
     int relayNum; // Number of the output for the associated frog relay
 };
 
-servo myServos[NUMSERVOS];
+volatile servo myServos[NUMSERVOS];
 
 // Create structure to hold data about the lights
 struct light {
@@ -178,7 +187,7 @@ struct light {
 light streetLight[NUM_PWM_OUTPUTS];
 
 bool opLastState[NUMOUTPUTS] = {LOW, LOW};
-bool opReqState[NUMOUTPUTS] = {LOW, LOW};
+volatile bool opReqState[NUMOUTPUTS] = {LOW, LOW};
 bool changingState = false;
 
 int outputType[NUMOUTPUTS] = {RELAY, LIGHT};
@@ -235,6 +244,10 @@ void setup(void) {
     pwmLED.begin();
     pwmLED.setPWMFreq(PWM_FRAME_RATE);
 
+    // Initialise the timer interrupt
+    Timer1.initialize(INT_PERIOD);
+    Timer1.attachInterrupt(readFromCMRI);
+
     //SET THE THROW AND CLOSE VALUES FOR EACH SERVO BASED ON THE CALIBRATION PROCESS
     for (int servoNum = 0; servoNum<NUMSERVOS; servoNum++) {
         myServos[servoNum] = initialiseServo(myServos[servoNum], servoStart[servoNum], servoEnd[servoNum], servoNum);
@@ -259,11 +272,18 @@ void setup(void) {
 // ----------------------------------------------
 
 void loop(){
-    cmri.process();
+    // cmri.process();
 
     processServos();
     processSensors();
     processOutputs();
+}
+
+// ----------------------------------------------
+
+void readFromCMRI() {
+    // Called by the timer interrupt.
+    cmri.process();
 }
 
 // ----------------------------------------------

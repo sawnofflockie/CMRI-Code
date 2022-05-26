@@ -171,7 +171,7 @@ struct servo {
     int relayNum; // Number of the output for the associated frog relay
 };
 
-volatile servo myServos[NUMSERVOS];
+servo myServos[NUMSERVOS];
 
 // Create structure to hold data about the lights
 struct light {
@@ -187,7 +187,7 @@ struct light {
 light streetLight[NUM_PWM_OUTPUTS];
 
 bool opLastState[NUMOUTPUTS] = {LOW, LOW};
-volatile bool opReqState[NUMOUTPUTS] = {LOW, LOW};
+bool opReqState[NUMOUTPUTS] = {LOW, LOW};
 bool changingState = false;
 
 int outputType[NUMOUTPUTS] = {RELAY, LIGHT};
@@ -199,7 +199,7 @@ unsigned long currentTime; // The time, in milliseconds, of the current processi
 // ----------------------------------------------
 
 void setup(void);
-void loop(loop);
+void loop(void);
 void processOutputs(void);
 void processSensors(void);
 void processServos(void);

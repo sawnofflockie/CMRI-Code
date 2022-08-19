@@ -49,6 +49,10 @@
 #define FIRST_ONE       0
 #define LAST_ONE        (NUM_PWM_OUTPUTS - 1)
 
+#define SIGNALBOX_LIGHTS    6
+#define SIGBOX_FIRST        7
+#define SIGBOX_LAST         (SIGBOX_FIRST + SIGNALBOX_LIGHTS - 1)
+
 // The size of the step size used when signals are moving. The smaller the step size the slower the signal will move.
 #define SIGSTEP     3
 #define SIGDOWNSTEP 8
@@ -185,6 +189,7 @@ struct light {
 };
 
 light streetLight[NUM_PWM_OUTPUTS];
+light SBLight[SIGNALBOX_LIGHTS];
 
 bool opLastState[NUMOUTPUTS] = {LOW, LOW};
 bool opReqState[NUMOUTPUTS] = {LOW, LOW};
@@ -200,6 +205,7 @@ unsigned long currentTime; // The time, in milliseconds, of the current processi
 
 void setup(void);
 void loop(void);
+void readFromCMRI(void);
 void processOutputs(void);
 void processSensors(void);
 void processServos(void);
@@ -256,7 +262,7 @@ void setup(void) {
     // Initialize point motor virtual sensor to closed
     cmri.set_bit(8, HIGH);  //Bit 8 = address 1009 in JMRI, Virtual Sensor 9
 
-    for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
+    for (int pwmOutput = FIRST_ONE; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
         streetLight[pwmOutput].state = OFF;
         streetLight[pwmOutput].currentLevel = 0;
         streetLight[pwmOutput].lightType = GAS;
@@ -267,6 +273,15 @@ void setup(void) {
         streetLight[pwmOutput].waitStart = 0;
     }
 
+    for (int pwmOutput = FIRST_ONE; pwmOutput < SIGNALBOX_LIGHTS; pwmOutput++) {
+        SBLight[pwmOutput].state = OFF;
+        SBLight[pwmOutput].currentLevel = 0;
+        SBLight[pwmOutput].lightType = ELECTRIC;
+        SBLight[pwmOutput].lastTime = 0;
+        SBLight[pwmOutput].flickerDelay = 0;
+        SBLight[pwmOutput].waitPeriod = 0;
+        SBLight[pwmOutput].waitStart = 0;
+    }
 }
 
 // ----------------------------------------------
@@ -281,7 +296,7 @@ void loop(){
 
 // ----------------------------------------------
 
-void readFromCMRI() {
+void readFromCMRI(void) {
     // Called by the timer interrupt.
     cmri.process();
 }
@@ -306,6 +321,9 @@ void processOutputs(void) {
         if (opReqState[opNum] != opLastState[opNum]) {
             if (outputType[opNum] == RELAY) {
                 digitalWrite((outputPinNum), opReqState[opNum]);
+            }
+            if (outputType[opNum] == LIGHT) {
+                process_SB_lights(opReqState[opNum]);
             }
             opLastState[opNum] = opReqState[opNum];
         }
@@ -481,7 +499,7 @@ servo initialiseServo(servo currentServo, int Throw, int Close, int servoNum) {
 
 void process_LED_outputs(bool requiredState) {
     currentTime = millis();
-    for (int pwmOutput = 0; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
+    for (int pwmOutput = FIRST_ONE; pwmOutput < NUM_PWM_OUTPUTS; pwmOutput++) {
         switch (streetLight[pwmOutput].state) {
             case OFF:
                 if (requiredState == ON) {
@@ -526,6 +544,28 @@ void process_LED_outputs(bool requiredState) {
         Serial.print(", state= ");
         Serial.println(streetLight[pwmOutput].state);
 #endif
+    }
+}
+
+// ----------------------------------------------
+
+void process_SB_lights(bool requiredState) {
+    for (int pwmOutput = FIRST_ONE; pwmOutput < SIGNALBOX_LIGHTS; pwmOutput++) {
+        switch (SBLight[pwmOutput].state) {
+            case OFF:
+                if (requiredState == ON) {
+                    SBLight[pwmOutput].state = ON;
+                    SBLight[pwmOutput].currentLevel = PWM_NORMAL_LEVEL;
+                }
+            break;
+            case ON:
+                if (requiredState == OFF) {
+                    SBLight[pwmOutput].state = ON;
+                    SBLight[pwmOutput].currentLevel = OFF;
+                }
+            break;
+        }
+        pwmLED.writeMicroseconds((pwmOutput + SIGBOX_FIRST), SBLight[pwmOutput].currentLevel);
     }
 }
 

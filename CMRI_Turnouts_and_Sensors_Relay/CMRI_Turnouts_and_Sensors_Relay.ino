@@ -316,7 +316,9 @@ void processOutputs(void) {
                 opReqState[opNum] = cmri.get_bit(cmriInput);
             }
             process_LED_outputs(opReqState[opNum]); // Process LED street lights every time through, in order to process flickers.
-            process_SB_lights(opReqState[opNum]);
+            if (opReqState[opNum] != opLastState[opNum]) {
+                process_SB_lights(opReqState[opNum]);
+            }
         }
         // Only process output if it has changed since the last time.
         if (opReqState[opNum] != opLastState[opNum]) {
